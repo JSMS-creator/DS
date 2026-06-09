@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Laster...</title>
+  <meta name="description" id="page-desc" content="" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    // fbq('init', 'YOUR_PIXEL_ID'); // Uncomment and add pixel ID
+  </script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="#" class="logo" id="nav-logo">Store</a>
+    <div class="nav-links">
+      <a href="#product">Produkt</a>
+      <a href="#reviews">Anmeldelser</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="#buy" class="nav-cta">Kjøp nå</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-media">
+      <div class="image-gallery">
+        <img id="hero-main-img" src="" alt="Produkt" class="hero-img" />
+        <div class="thumbnails" id="thumbnails"></div>
+      </div>
+    </div>
+    <div class="hero-content">
+      <div class="badge-row">
+        <span class="badge">🇳🇴 Leveres til Norge</span>
+        <span class="badge">⚡ 3–7 dager</span>
+      </div>
+      <h1 id="product-name">Laster produkt...</h1>
+      <div class="rating-row">
+        <span class="stars">★★★★★</span>
+        <span class="rating-text">4.8 · 1 200+ fornøyde kunder</span>
+      </div>
+      <div class="price-row">
+        <span class="price-current" id="price-display">NOK —</span>
+        <span class="price-old" id="price-old"></span>
+        <span class="vat-note">Inkl. 25% MVA</span>
+      </div>
+
+      <!-- Variants -->
+      <div id="variants-section" class="variants-section" style="display:none">
+        <label class="variant-label" id="variant-label">Velg variant:</label>
+        <div class="variant-buttons" id="variant-buttons"></div>
+      </div>
+
+      <!-- Quantity -->
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <span id="qty-display">1</span>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+
+      <button class="buy-btn" id="buy-btn" onclick="initCheckout()">
+        <span>Legg i handlekurv — Betal nå</span>
+      </button>
+      <p class="secure-note">🔒 Sikker betaling med Stripe · Vipps-kort støttet</p>
+
+      <ul class="benefits">
+        <li>✅ Gratis frakt til Norge</li>
+        <li>✅ 30 dagers returrett</li>
+        <li>✅ Kundesupport på norsk</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF STRIP -->
+<section class="social-strip">
+  <div class="social-inner">
+    <div class="social-item"><b>12 400+</b><span>solgte enheter</span></div>
+    <div class="social-item"><b>4.8/5</b><span>gjennomsnittlig vurdering</span></div>
+    <div class="social-item"><b>3–7 dager</b><span>levering til Norge</span></div>
+    <div class="social-item"><b>30 dager</b><span>returrett</span></div>
+  </div>
+</section>
+
+<!-- PRODUCT DETAILS -->
+<section class="product-section" id="product">
+  <div class="section-inner">
+    <h2>Hvorfor du vil elske det</h2>
+    <div id="product-description" class="product-description"></div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="reviews-section" id="reviews">
+  <div class="section-inner">
+    <h2>Hva kundene sier</h2>
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="stars">★★★★★</div>
+        <p>"Fantastisk produkt! Leverte på 5 dager og kvaliteten er topp."</p>
+        <span class="reviewer">— Maria H., Oslo</span>
+      </div>
+      <div class="review-card">
+        <div class="stars">★★★★★</div>
+        <p>"Kjøpte to stykk — ett til meg og ett i gave. Begge var strålende fornøyde!"</p>
+        <span class="reviewer">— Kristian T., Bergen</span>
+      </div>
+      <div class="review-card">
+        <div class="stars">★★★★☆</div>
+        <p>"God kvalitet og rask levering. Vil definitivt kjøpe igjen."</p>
+        <span class="reviewer">— Ingrid L., Trondheim</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <div class="section-inner">
+    <h2>Vanlige spørsmål</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>Hvor lang tid tar levering til Norge?</summary>
+        <p>Vi sender fra vårt europeiske lager i Tyskland. Leveringstid til Norge er typisk 3–7 virkedager.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Er MVA inkludert i prisen?</summary>
+        <p>Ja, all norsk MVA (25%) er inkludert i prisen du ser. Ingen overraskelser ved levering.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Hva er returpolicyen?</summary>
+        <p>Du har 30 dagers returrett fra mottaksdato. Kontakt oss på e-post så hjelper vi deg.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Hvilke betalingsmetoder aksepteres?</summary>
+        <p>Vi aksepterer alle vanlige kort (Visa, Mastercard), Apple Pay og Google Pay via Stripe.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Kan jeg spore pakken min?</summary>
+        <p>Ja! Du mottar en sporingslink på e-post så snart pakken er sendt.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="checkout-modal">
+    <button class="modal-close" onclick="closeCheckout()">✕</button>
+    <h2>Fullfør bestilling</h2>
+
+    <div class="order-summary" id="modal-summary"></div>
+
+    <div class="form-section">
+      <h3>Leveringsinformasjon</h3>
+      <div class="form-grid">
+        <input type="text" id="f-name" placeholder="Fullt navn *" required />
+        <input type="email" id="f-email" placeholder="E-postadresse *" required />
+        <input type="text" id="f-address" placeholder="Gateadresse *" required />
+        <input type="text" id="f-postal" placeholder="Postnummer *" required />
+        <input type="text" id="f-city" placeholder="Poststed *" required />
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Betalingsinformasjon</h3>
+      <div id="payment-element"></div>
+      <div id="payment-message" class="payment-message"></div>
+    </div>
+
+    <button class="pay-btn" id="pay-btn" onclick="submitPayment()">
+      Betal sikkert
+    </button>
+    <p class="stripe-note">Sikret av <b>Stripe</b> · SSL-kryptert</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <p id="footer-store-name">© 2025 Store</p>
+    <div class="footer-links">
+      <a href="#faq">FAQ</a>
+      <a href="mailto:support@yourstore.no">Kontakt oss</a>
+      <a href="#">Personvern</a>
+      <a href="#">Vilkår</a>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
