@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Dropship Store</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f8f8; color: #111; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: #111; color: #fff; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .sidebar h1 { font-size: 1rem; font-weight: 800; margin-bottom: 20px; color: #fff; padding: 0 8px; }
+    .nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: background 0.15s; }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: rgba(255,255,255,0.15); font-weight: 600; }
+    .main { margin-left: 220px; padding: 32px; }
+    .page { display: none; } .page.active { display: block; }
+    h2 { font-size: 1.4rem; margin-bottom: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stat-card .label { font-size: 0.8rem; color: #666; margin-bottom: 8px; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 800; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    th { padding: 12px 16px; text-align: left; font-size: 0.8rem; color: #666; border-bottom: 1px solid #eee; background: #fafafa; }
+    td { padding: 12px 16px; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+    .badge { padding: 3px 8px; border-radius: 100px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-processing { background: #dbeafe; color: #1e40af; }
+    .badge-shipped { background: #d1fae5; color: #065f46; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    .section-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    input, textarea, select { width: 100%; padding: 10px 12px; border: 1.5px solid #e8e8e8; border-radius: 8px; font-size: 0.9rem; margin-bottom: 12px; outline: none; }
+    input:focus, textarea:focus { border-color: #2563eb; }
+    button { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    .btn-primary { background: #111; color: #fff; }
+    .btn-secondary { background: #f0f0f0; color: #111; }
+    .search-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .search-row input { margin: 0; }
+    #cj-results { margin-top: 16px; }
+    .cj-product { padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .cj-product-info { font-size: 0.85rem; }
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 360px; }
+    .login-box h1 { margin-bottom: 24px; }
+    #app { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <h1>Admin-login</h1>
+    <input type="password" id="secret-input" placeholder="Admin-nøkkel" />
+    <button class="btn-primary" onclick="login()" style="width:100%">Logg inn</button>
+    <p id="login-error" style="color:red;font-size:0.85rem;margin-top:8px"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <h1>📦 Admin</h1>
+    <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
+    <div class="nav-item" onclick="showPage('orders')">🛒 Ordrer</div>
+    <div class="nav-item" onclick="showPage('products')">🏷️ Produkter</div>
+    <div class="nav-item" onclick="showPage('cj')">🔍 Søk CJ</div>
+  </div>
+
+  <div class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <h2>Dashboard</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Totale ordrer</div><div class="value" id="stat-orders">—</div></div>
+        <div class="stat-card"><div class="label">Total omsetning</div><div class="value" id="stat-revenue">—</div></div>
+        <div class="stat-card"><div class="label">Ventende</div><div class="value" id="stat-pending">—</div></div>
+        <div class="stat-card"><div class="label">Under behandling</div><div class="value" id="stat-processing">—</div></div>
+      </div>
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">Siste ordrer</h3>
+        <div id="recent-orders-table"></div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="page" id="page-orders">
+      <h2>Alle ordrer</h2>
+      <div id="orders-table"></div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="page" id="page-products">
+      <h2>Produkter i butikken</h2>
+      <div class="section-card">
+        <h3>Legg til / oppdater produkt manuelt</h3>
+        <input id="p-cj-id" placeholder="CJ Product ID *" />
+        <input id="p-name" placeholder="Produktnavn *" />
+        <textarea id="p-desc" rows="4" placeholder="Beskrivelse (HTML ok)"></textarea>
+        <input id="p-buy" placeholder="CJ Kjøpspris (USD)" type="number" step="0.01" />
+        <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" />
+        <input id="p-shipping" placeholder="Frakt NOK (0 = gratis)" type="number" step="1" />
+        <input id="p-images" placeholder="Bilde-URLer, kommaseparert" />
+        <button class="btn-primary" onclick="saveProduct()">Lagre produkt</button>
+        <span id="p-save-msg" style="margin-left:12px;font-size:0.85rem;color:green"></span>
+      </div>
+      <div id="products-list"></div>
+    </div>
+
+    <!-- CJ SEARCH -->
+    <div class="page" id="page-cj">
+      <h2>Søk CJ Dropshipping</h2>
+      <div class="search-row">
+        <input id="cj-search-input" placeholder="Søk på produktnavn..." onkeydown="if(event.key==='Enter')searchCJ()" />
+        <button class="btn-primary" onclick="searchCJ()">Søk</button>
+      </div>
+      <div id="cj-results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let adminSecret = '';
+
+async function api(path, options = {}) {
+  const res = await fetch(API + path, { ...options, headers: { 'x-admin-secret': adminSecret, 'Content-Type': 'application/json', ...options.headers } });
+  return res.json();
+}
+
+async function login() {
+  adminSecret = document.getElementById('secret-input').value;
+  const data = await api('/admin/stats').catch(() => null);
+  if (!data || data.error) { document.getElementById('login-error').textContent = 'Feil nøkkel.'; return; }
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadDashboard();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'orders') loadOrders();
+  if (name === 'products') loadProducts();
+}
+
+async function loadDashboard() {
+  const stats = await api('/admin/stats');
+  document.getElementById('stat-orders').textContent = stats.totalOrders;
+  document.getElementById('stat-revenue').textContent = 'NOK ' + Math.round(stats.totalRevenue).toLocaleString('no-NO');
+  document.getElementById('stat-pending').textContent = stats.pending;
+  document.getElementById('stat-processing').textContent = stats.processing;
+  const orders = await api('/admin/orders');
+  document.getElementById('recent-orders-table').innerHTML = renderOrderTable(orders.slice(0, 5));
+}
+
+async function loadOrders() {
+  const orders = await api('/admin/orders');
+  document.getElementById('orders-table').innerHTML = renderOrderTable(orders);
+}
+
+function renderOrderTable(orders) {
+  if (!orders.length) return '<p style="color:#666">Ingen ordrer ennå.</p>';
+  return `<table>
+    <thead><tr><th>ID</th><th>Kunde</th><th>Produkt</th><th>Total</th><th>Status</th><th>Dato</th><th>Sporing</th></tr></thead>
+    <tbody>${orders.map(o => `
+      <tr>
+        <td>#${o.id}</td>
+        <td>${o.customer_name}<br><small style="color:#999">${o.customer_email}</small></td>
+        <td>${o.product_name} × ${o.quantity}</td>
+        <td>NOK ${Math.round(o.total_nok).toLocaleString('no-NO')}</td>
+        <td><span class="badge badge-${o.status}">${o.status}</span></td>
+        <td>${o.created_at?.slice(0,10)}</td>
+        <td>${o.tracking_number ? `<a href="${o.tracking_url || '#'}" target="_blank">${o.tracking_number}</a>` : '—'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+async function loadProducts() {
+  const products = await api('/admin/../products');
+  document.getElementById('products-list').innerHTML = products.length
+    ? products.map(p => `<div class="section-card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <div><b>${p.name}</b><br><small style="color:#666">CJ ID: ${p.cj_product_id} · NOK ${p.sell_price_nok}</small></div>
+        <button class="btn-secondary" onclick="toggleProduct('${p.cj_product_id}')">${p.active ? 'Deaktiver' : 'Aktiver'}</button>
+      </div>`).join('')
+    : '<p style="color:#666">Ingen produkter ennå. Legg til via skjemaet over.</p>';
+}
+
+async function saveProduct() {
+  const data = {
+    cj_product_id: document.getElementById('p-cj-id').value.trim(),
+    name: document.getElementById('p-name').value.trim(),
+    description: document.getElementById('p-desc').value.trim(),
+    buy_price_usd: parseFloat(document.getElementById('p-buy').value) || null,
+    sell_price_nok: parseFloat(document.getElementById('p-sell').value),
+    shipping_price_nok: parseFloat(document.getElementById('p-shipping').value) || 0,
+    images: document.getElementById('p-images').value.split(',').map(s => s.trim()).filter(Boolean),
+    variants: []
+  };
+  if (!data.cj_product_id || !data.name || !data.sell_price_nok) { alert('Fyll inn CJ ID, navn og salgspris.'); return; }
+  await api('/admin/products', { method: 'POST', body: JSON.stringify(data) });
+  document.getElementById('p-save-msg').textContent = '✓ Lagret!';
+  setTimeout(() => document.getElementById('p-save-msg').textContent = '', 3000);
+  loadProducts();
+}
+
+async function toggleProduct(id) {
+  await api(`/admin/products/${id}/toggle`, { method: 'PATCH' });
+  loadProducts();
+}
+
+async function searchCJ() {
+  const q = document.getElementById('cj-search-input').value.trim();
+  if (!q) return;
+  document.getElementById('cj-results').innerHTML = '<p>Søker...</p>';
+  const data = await api(`/admin/cj/search?q=${encodeURIComponent(q)}`);
+  const products = data?.data?.list || [];
+  document.getElementById('cj-results').innerHTML = products.length
+    ? products.map(p => `<div class="cj-product">
+        <div class="cj-product-info">
+          <b>${p.productNameEn}</b><br>
+          <span style="color:#666">ID: ${p.pid} · USD ${p.sellPrice} · Lager: ${p.productStock}</span>
+        </div>
+        <button class="btn-secondary" onclick="prefillProduct('${p.pid}','${p.productNameEn.replace(/'/g,"\\'")}','${p.sellPrice}')">Importer</button>
+      </div>`).join('')
+    : '<p style="color:#666">Ingen resultater.</p>';
+}
+
+function prefillProduct(pid, name, price) {
+  showPage('products');
+  document.getElementById('p-cj-id').value = pid;
+  document.getElementById('p-name').value = name;
+  document.getElementById('p-buy').value = price;
+  document.getElementById('p-sell').value = Math.round(price * 10.5 * 1.25);
+}
+</script>
+</body>
+</html>
