@@ -1,9 +1,14 @@
-import Database from 'better-sqlite3';
+// Uses better-sqlite3 with Railway-compatible path
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
+const require = createRequire(import.meta.url);
+const Database = require('better-sqlite3');
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const db = new Database(join(__dirname, 'orders.db'));
+
+const dbPath = process.env.DB_PATH || join(__dirname, 'orders.db');
+const db = new Database(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS orders (
