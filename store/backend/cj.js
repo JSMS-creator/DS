@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const BASE = process.env.CJ_API_BASE;
+const BASE = process.env.CJ_API_BASE || 'https://developers.cjdropshipping.com/api2.0';
 let _token = null;
 let _tokenExpiry = 0;
 
