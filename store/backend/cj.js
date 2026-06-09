@@ -5,6 +5,9 @@ let _token = null;
 let _tokenExpiry = 0;
 
 async function getToken() {
+  // If a direct API key is provided, use it without email/password auth
+  if (process.env.CJ_API_KEY) return process.env.CJ_API_KEY;
+
   if (_token && Date.now() < _tokenExpiry) return _token;
   console.log('CJ: authenticating with', process.env.CJ_EMAIL);
   const res = await fetch(`${BASE}/authentication/getAccessToken`, {
@@ -28,7 +31,8 @@ async function cjRequest(path, options = {}) {
     ...options,
     headers: { 'CJ-Access-Token': token, 'Content-Type': 'application/json', ...options.headers }
   });
-  return res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { throw new Error('CJ invalid JSON response: ' + text.slice(0, 100)); }
 }
 
 export async function getProduct(pid) {
