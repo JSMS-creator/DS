@@ -6,15 +6,19 @@ let _tokenExpiry = 0;
 
 async function getToken() {
   if (_token && Date.now() < _tokenExpiry) return _token;
+  console.log('CJ: authenticating with', process.env.CJ_EMAIL);
   const res = await fetch(`${BASE}/authentication/getAccessToken`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: process.env.CJ_EMAIL, password: process.env.CJ_PASSWORD })
   });
-  const data = await res.json();
+  const text = await res.text();
+  console.log('CJ auth response:', text.slice(0, 300));
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error('CJ auth invalid JSON: ' + text.slice(0, 100)); }
   if (!data.result) throw new Error('CJ auth failed: ' + data.message);
   _token = data.data.accessToken;
-  _tokenExpiry = Date.now() + (data.data.expiresIn - 60) * 1000;
+  _tokenExpiry = Date.now() + ((data.data.expiresIn || 3600) - 60) * 1000;
   return _token;
 }
 
