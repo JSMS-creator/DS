@@ -1,4 +1,4 @@
-const API = null; // Demo mode — no backend needed
+const API = 'https://thorough-charm-production-ecb9.up.railway.app/api';
 const STRIPE_PK = 'pk_test_demo';
 
 // Demo product — replace with real API call when backend is deployed
@@ -42,11 +42,13 @@ async function init() {
 
 async function loadProduct() {
   try {
-    const products = [DEMO_PRODUCT];
+    const res = await fetch(`${API}/products`);
+    const products = await res.json();
     if (!products.length) return showError('Ingen produkter tilgjengelig.');
     renderProduct(products[0]);
   } catch {
-    showError('Kunne ikke laste produkt. Prøv igjen.');
+    // Fallback to demo product if backend is unreachable
+    renderProduct(DEMO_PRODUCT);
   }
 }
 
