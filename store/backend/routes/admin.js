@@ -26,19 +26,24 @@ router.patch('/orders/:id', (req, res) => {
 });
 
 // Search CJ products
-router.get('/cj/search', async (req, res) => {
-  const { q, page } = req.query;
-  const result = await searchProducts(q, page || 1);
-  res.json(result);
+router.get('/cj/search', async (req, res, next) => {
+  try {
+    const { q, page } = req.query;
+    if (!q) return res.json({ data: { list: [] } });
+    const result = await searchProducts(q, page || 1);
+    res.json(result);
+  } catch (err) { next(err); }
 });
 
 // Get CJ product details
-router.get('/cj/product/:pid', async (req, res) => {
-  const [product, variants] = await Promise.all([
-    getProduct(req.params.pid),
-    getProductVariants(req.params.pid)
-  ]);
-  res.json({ product: product.data, variants: variants.data });
+router.get('/cj/product/:pid', async (req, res, next) => {
+  try {
+    const [product, variants] = await Promise.all([
+      getProduct(req.params.pid),
+      getProductVariants(req.params.pid)
+    ]);
+    res.json({ product: product.data, variants: variants.data });
+  } catch (err) { next(err); }
 });
 
 // Add/update product in store
@@ -63,12 +68,14 @@ router.patch('/products/:id/toggle', (req, res) => {
 });
 
 // Dashboard stats
-router.get('/stats', (req, res) => {
-  const totalOrders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
-  const totalRevenue = db.prepare("SELECT COALESCE(SUM(total_nok), 0) as s FROM orders WHERE status != 'cancelled'").get().s;
-  const pending = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get().c;
-  const processing = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'processing'").get().c;
-  res.json({ totalOrders, totalRevenue, pending, processing });
+router.get('/stats', (req, res, next) => {
+  try {
+    const totalOrders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
+    const totalRevenue = db.prepare("SELECT COALESCE(SUM(total_nok), 0) as s FROM orders WHERE status != 'cancelled'").get().s;
+    const pending = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get().c;
+    const processing = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'processing'").get().c;
+    res.json({ totalOrders, totalRevenue, pending, processing });
+  } catch (err) { next(err); }
 });
 
 export default router;

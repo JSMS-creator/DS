@@ -20,6 +20,13 @@ app.use('/api/admin', adminRoutes);
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+// Global error handler — ensures CORS headers are always present
+app.use((err, req, res, next) => {
+  console.error(err.message);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
 app.listen(PORT, async () => {
   console.log(`Backend running on port ${PORT}`);
   // Auto-seed demo product in production if no products exist
