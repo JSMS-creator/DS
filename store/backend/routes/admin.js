@@ -65,7 +65,7 @@ router.patch('/products/:id/toggle', (req, res) => {
 // Dashboard stats
 router.get('/stats', (req, res) => {
   const totalOrders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
-  const totalRevenue = db.prepare('SELECT COALESCE(SUM(total_nok), 0) as s FROM orders WHERE status != "cancelled"').get().s;
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(total_nok), 0) as s FROM orders WHERE status != 'cancelled'").get().s;
   const pending = db.prepare('SELECT COUNT(*) as c FROM orders WHERE status = "pending"').get().c;
   const processing = db.prepare('SELECT COUNT(*) as c FROM orders WHERE status = "processing"').get().c;
   res.json({ totalOrders, totalRevenue, pending, processing });
