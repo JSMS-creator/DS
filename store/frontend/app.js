@@ -1,5 +1,5 @@
 const API = 'http://localhost:3001/api';
-const STRIPE_PK = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY'; // Replace with your key
+const STRIPE_PK = 'pk_test_demo'; // Demo mode — replace with real Stripe key later
 
 let stripe, elements, paymentElement;
 let currentProduct = null;
