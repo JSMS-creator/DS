@@ -285,6 +285,14 @@ function totalPriceInclVat(sellPrice, shippingPrice) {
 
 function formatPrice(n) { return Math.round(n).toLocaleString('no-NO'); }
 
+function goHome(e, hash) {
+  const successVisible = document.getElementById('order-success')?.style.display !== 'none';
+  if (successVisible) {
+    e.preventDefault();
+    location.href = location.pathname + (hash || '');
+  }
+}
+
 // ── Checkout ─────────────────────────────────────────────────
 async function initCheckout() {
   if (!currentProduct) return;
@@ -404,3 +412,4 @@ window.initCheckout = initCheckout;
 window.submitPayment = submitPayment;
 window.closeCheckout = closeCheckout;
 window.closeModal = closeModal;
+window.goHome = goHome;

@@ -18,13 +18,13 @@
 <!-- NAVBAR -->
 <nav class="navbar">
   <div class="nav-inner">
-    <a href="#" class="logo" id="nav-logo">Store</a>
+    <a href="#" class="logo" id="nav-logo" onclick="goHome(event)">Store</a>
     <div class="nav-links">
-      <a href="#product">Produkt</a>
-      <a href="#reviews">Anmeldelser</a>
-      <a href="#faq">FAQ</a>
+      <a href="#product" onclick="goHome(event, '#product')">Produkt</a>
+      <a href="#reviews" onclick="goHome(event, '#reviews')">Anmeldelser</a>
+      <a href="#faq" onclick="goHome(event, '#faq')">FAQ</a>
     </div>
-    <a href="#buy" class="nav-cta">Kjøp nå</a>
+    <a href="#buy" class="nav-cta" onclick="goHome(event, '#buy')">Kjøp nå</a>
   </div>
 </nav>
 
