@@ -37,7 +37,7 @@
     .search-row { display: flex; gap: 12px; margin-bottom: 16px; }
     .search-row input { margin: 0; }
     #cj-results { margin-top: 16px; }
-    .cj-product { padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .cj-product { padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
     .cj-product-info { font-size: 0.85rem; }
     .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .login-box { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 360px; }
@@ -217,17 +217,22 @@ async function searchCJ() {
   if (!q) return;
   document.getElementById('cj-results').innerHTML = '<p>Søker...</p>';
   const data = await api(`/admin/cj/search?q=${encodeURIComponent(q)}`);
-  console.log('CJ raw response:', JSON.stringify(data).slice(0, 500));
-  // CJ kan returnere liste på ulike steder avhengig av API-versjon
   const products = data?.data?.list || data?.data || data?.list || [];
   document.getElementById('cj-results').innerHTML = products.length
-    ? products.map(p => `<div class="cj-product">
-        <div class="cj-product-info">
-          <b>${p.productNameEn}</b><br>
-          <span style="color:#666">ID: ${p.pid} · USD ${p.sellPrice} · Lager: ${p.productStock}</span>
-        </div>
-        <button class="btn-secondary" onclick="prefillProduct('${p.pid}','${p.productNameEn.replace(/'/g,"\\'")}','${p.sellPrice}')">Importer</button>
-      </div>`).join('')
+    ? products.map(p => {
+        const img = p.productImage || (p.productImageSet && p.productImageSet[0]) || '';
+        const price = p.sellPrice || p.salePrice || '?';
+        const name = p.productNameEn || p.productName || 'Ukjent produkt';
+        const safeName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return `<div class="cj-product">
+          ${img ? `<img src="${img}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display='none'" />` : '<div style="width:72px;height:72px;background:#f0f0f0;border-radius:8px;flex-shrink:0"></div>'}
+          <div class="cj-product-info" style="flex:1;min-width:0">
+            <b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</b>
+            <span style="color:#666;font-size:0.8rem">ID: ${p.pid} · USD ${price}</span>
+          </div>
+          <button class="btn-secondary" style="flex-shrink:0" onclick="prefillProduct('${p.pid}','${safeName}','${price}')">Importer</button>
+        </div>`;
+      }).join('')
     : '<p style="color:#666">Ingen resultater.</p>';
 }
 
