@@ -165,7 +165,7 @@ router.post('/demo-checkout', async (req, res, next) => {
         shippingPhone: '00000000',
         email: email || '',
         remark: 'DEMO ORDER',
-        products: [{ vid: cjVid, quantity: Number(quantity) }]
+        products: [{ vid: cjVid, pid: productId, quantity: Number(quantity) }]
       });
       if (cjRes.result) cjOrderId = cjRes.data?.orderId || null;
       else cjError = cjRes.message || JSON.stringify(cjRes);

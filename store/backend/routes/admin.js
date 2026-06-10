@@ -168,12 +168,12 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
       remark: '',
       products: [{
         vid: (() => {
-          // order.variant may be a SKU — try to find UUID from product variants
-          const product = db.prepare('SELECT variants FROM products WHERE cj_product_id = ?').get(order.product_id);
-          const variants = JSON.parse(product?.variants || '[]');
+          const prod = db.prepare('SELECT variants FROM products WHERE cj_product_id = ?').get(order.product_id);
+          const variants = JSON.parse(prod?.variants || '[]');
           const match = variants.find(v => v.variantId === order.variant || v.variantSku === order.variant);
           return match?.variantId || order.variant || '';
         })(),
+        pid: order.product_id,
         quantity: order.quantity
       }]
     };
