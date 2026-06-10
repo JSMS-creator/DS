@@ -235,7 +235,7 @@ async function saveProduct() {
     buy_price_usd: parseFloat(document.getElementById('p-buy').value) || null,
     sell_price_nok: parseFloat(document.getElementById('p-sell').value),
     shipping_price_nok: parseFloat(document.getElementById('p-shipping').value) || 0,
-    images: document.getElementById('p-images').value.split(',').map(s => s.trim()).filter(Boolean),
+    images: document.getElementById('p-images').value.replace(/[\[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean),
     variants: []
   };
   if (!data.cj_product_id || !data.name || !data.sell_price_nok) { alert('Fyll inn CJ ID, navn og salgspris.'); return; }
@@ -351,8 +351,10 @@ async function openDetailModal(pid) {
     const data = await api(`/admin/cj/product/${pid}`);
     const p = data.product || {};
     const variants = data.variants || [];
-    const images = [p.productImage, ...(p.productImageSet || [])].filter(Boolean);
-    const uniqueImages = [...new Set(images)];
+    let imgSet = p.productImageSet || [];
+    if (typeof imgSet === 'string') { try { imgSet = JSON.parse(imgSet); } catch { imgSet = []; } }
+    const images = [p.productImage, ...imgSet].filter(Boolean);
+    const uniqueImages = [...new Set(images.map(u => u.replace(/[\[\]"]/g, '').trim()).filter(Boolean))];
     const rawPrice = p.sellPrice || p.salePrice || '0';
     const price = parseFloat(String(rawPrice).split('-')[0]) || 0;
     const priceDisplay = p.sellPrice || p.salePrice || '?';
@@ -427,11 +429,14 @@ function importFromCache(pid) {
   // Images may be an array or a JSON string; flatten and deduplicate
   let images = p._allImages;
   if (!images) {
-    const imgSet = p.productImageSet || [];
-    const parsed = typeof imgSet === 'string' ? JSON.parse(imgSet) : imgSet;
-    images = [p.productImage, ...parsed].filter(Boolean);
+    let imgSet = p.productImageSet || [];
+    if (typeof imgSet === 'string') {
+      try { imgSet = JSON.parse(imgSet); } catch { imgSet = []; }
+    }
+    images = [p.productImage, ...imgSet].filter(Boolean);
   }
-  const uniqueImages = [...new Set(images)];
+  // Strip any stray JSON brackets/quotes from individual URLs
+  const uniqueImages = [...new Set(images.map(u => u.replace(/[\[\]"]/g, '').trim()).filter(Boolean))];
   showPage('products', null);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelector('[onclick*="products"]').classList.add('active');
