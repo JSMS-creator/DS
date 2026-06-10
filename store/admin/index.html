@@ -261,10 +261,34 @@ async function loadProducts() {
   const products = await api('/admin/../products');
   document.getElementById('products-list').innerHTML = products.length
     ? products.map(p => `<div class="section-card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-        <div><b>${p.name}</b><br><small style="color:#666">CJ ID: ${p.cj_product_id} · NOK ${p.sell_price_nok}</small></div>
-        <button class="btn-secondary" onclick="toggleProduct('${p.cj_product_id}')">${p.active ? 'Deaktiver' : 'Aktiver'}</button>
+        <div><b>${p.name}</b><br><small style="color:#666">CJ ID: ${p.cj_product_id} · NOK ${p.sell_price_nok} · ${Array.isArray(p.variants) ? p.variants.length : 0} varianter</small></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="editProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">Rediger</button>
+          <button class="btn-secondary" onclick="toggleProduct('${p.cj_product_id}')">${p.active ? 'Deaktiver' : 'Aktiver'}</button>
+        </div>
       </div>`).join('')
     : '<p style="color:#666">Ingen produkter ennå. Legg til via skjemaet over.</p>';
+}
+
+function editProduct(p) {
+  document.getElementById('p-cj-id').value = p.cj_product_id;
+  document.getElementById('p-name').value = p.name;
+  document.getElementById('p-desc').value = p.description || '';
+  document.getElementById('p-buy').value = p.buy_price_usd || '';
+  document.getElementById('p-sell').value = p.sell_price_nok || '';
+  document.getElementById('p-shipping').value = p.shipping_price_nok || '';
+  const imgs = Array.isArray(p.images) ? p.images : [];
+  document.getElementById('p-images').value = imgs.join(', ');
+  updateMarkupDisplay();
+  // Render variants
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  document.getElementById('p-variants-tbody').innerHTML = '';
+  document.getElementById('p-variants-box').style.display = variants.length ? 'block' : 'none';
+  variants.forEach(v => addVariantRow(v));
+  syncVariantsJson();
+  _descBeforeAI = null;
+  document.getElementById('ai-undo-btn').style.display = 'none';
+  document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function saveProduct() {
@@ -644,9 +668,9 @@ function renderVariantRows(variants) {
 
 function addVariantRow(v = {}) {
   const tbody = document.getElementById('p-variants-tbody');
-  const usd = parseFloat(v.variantSellPrice || v.sellPrice || 0);
+  const usd = parseFloat(v.variantBuyPriceUsd || v.sellPrice || 0);
   const pct = parseFloat(document.getElementById('p-markup')?.value) || 300;
-  const nok = usd ? calcNok(usd, pct) : (v.nok || '');
+  const nok = v.variantSellPrice || (usd ? calcNok(usd, pct) : '');
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="padding:4px;border:1px solid #eee"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantNameEn || v.variantName || ''}" placeholder="Navn" oninput="syncVariantsJson()" /></td>
@@ -673,8 +697,8 @@ function syncVariantsJson() {
     const inputs = tr.querySelectorAll('input');
     return {
       variantNameEn: inputs[0].value.trim(),
-      variantSellPrice: parseFloat(inputs[1].value) || 0,
-      nok: parseFloat(inputs[2].value) || 0,
+      variantBuyPriceUsd: parseFloat(inputs[1].value) || 0,
+      variantSellPrice: parseFloat(inputs[2].value) || 0,  // NOK — this is what the store displays
       variantSku: inputs[3].value.trim()
     };
   }).filter(v => v.variantNameEn);
