@@ -234,10 +234,10 @@ async function initCheckout() {
   priceBreakdown = { subtotal, shipping, vat, total };
   renderModalSummary(priceBreakdown);
 
-  // Demo mode — show mock payment form
+  // Demo mode — show demo notice instead of Stripe
   document.getElementById('payment-element').innerHTML = `
-    <div style="border:1.5px solid #e8e8e8;border-radius:8px;padding:16px;background:#fafafa;color:#666;font-size:0.9rem;text-align:center">
-      🔒 Betalingsfelt (Stripe) — kobles til når du legger inn din Stripe-nøkkel
+    <div style="border:1.5px solid #fde68a;border-radius:8px;padding:14px 16px;background:#fffbeb;color:#92400e;font-size:0.88rem">
+      🧪 <strong>Demo-modus:</strong> Ingen ekte betaling — trykk "Betal sikkert" for å teste hele ordreflyten (CJ-ordre + e-post).
     </div>`;
 }
 
@@ -273,22 +273,44 @@ async function submitPayment() {
   btn.textContent = 'Behandler...';
   showPaymentMessage('');
 
-  const { error } = await stripe.confirmPayment({
-    elements,
-    confirmParams: {
-      return_url: window.location.origin + '/thank-you.html',
-      receipt_email: email,
-      shipping: {
-        name,
-        address: { line1: address, postal_code: postal, city, country: 'NO' }
-      }
+  try {
+    const res = await fetch(`${API}/orders/demo-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: currentProduct.cj_product_id,
+        variantId: selectedVariant?.variantSku || selectedVariant?.variantNameEn || '',
+        quantity,
+        name, email, address, postal, city
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showPaymentMessage(data.error || 'Noe gikk galt.');
+      btn.disabled = false;
+      btn.textContent = 'Betal sikkert';
+      return;
     }
-  });
-
-  if (error) {
-    showPaymentMessage(error.message);
+    closeCheckout();
+    showOrderSuccess(name, email, data.total);
+  } catch (e) {
+    showPaymentMessage('Nettverksfeil. Prøv igjen.');
     btn.disabled = false;
     btn.textContent = 'Betal sikkert';
+  }
+}
+
+function showOrderSuccess(name, email, total) {
+  document.getElementById('product-section').style.display = 'none';
+  const el = document.getElementById('order-success');
+  if (el) {
+    el.style.display = 'block';
+    const nameEl = document.getElementById('success-name');
+    const emailEl = document.getElementById('success-email');
+    const totalEl = document.getElementById('success-total');
+    if (nameEl) nameEl.textContent = name;
+    if (emailEl) emailEl.textContent = email;
+    if (totalEl) totalEl.textContent = 'NOK ' + formatPrice(total);
   }
 }
 

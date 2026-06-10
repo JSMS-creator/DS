@@ -28,7 +28,19 @@
   </div>
 </nav>
 
+<!-- ORDER SUCCESS -->
+<section id="order-success" style="display:none;padding:80px 20px;text-align:center;max-width:520px;margin:0 auto">
+  <div style="font-size:3rem;margin-bottom:16px">🎉</div>
+  <h2 style="font-size:1.6rem;margin-bottom:8px">Takk for bestillingen, <span id="success-name"></span>!</h2>
+  <p style="color:#555;margin-bottom:24px;line-height:1.6">Vi har mottatt ordren din og sender en bekreftelse til <strong id="success-email"></strong>. Pakken er på vei!</p>
+  <div style="background:#f0fdf4;border-radius:12px;padding:16px 24px;display:inline-block;margin-bottom:24px">
+    <span style="color:#166534;font-weight:700;font-size:1.1rem">Totalt betalt: <span id="success-total"></span></span>
+  </div>
+  <p style="color:#888;font-size:0.85rem">Forventet leveringstid: 7–14 virkedager til Norge.</p>
+</section>
+
 <!-- HERO -->
+<div id="product-section">
 <section class="hero" id="hero">
   <div class="hero-inner">
     <div class="hero-media">
@@ -150,6 +162,7 @@
     </div>
   </div>
 </section>
+</div><!-- end #product-section -->
 
 <!-- CHECKOUT MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">

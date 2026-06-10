@@ -124,6 +124,72 @@ async function fulfillOrder(intent) {
   }
 }
 
+// Demo checkout — simulates full order flow without Stripe
+router.post('/demo-checkout', async (req, res, next) => {
+  try {
+    const { productId, variantId, quantity = 1, name, email, address, postal, city } = req.body;
+    if (!name || !email) return res.status(400).json({ error: 'Navn og e-post er påkrevd' });
+
+    const product = db.prepare('SELECT * FROM products WHERE cj_product_id = ? AND active = 1').get(productId);
+    if (!product) return res.status(404).json({ error: 'Produkt ikke funnet' });
+
+    const variants = JSON.parse(product.variants || '[]');
+    const variant = variants.find(v => v.variantSku === variantId || v.variantNameEn === variantId) || variants[0];
+    const unitPrice = variant?.variantSellPrice || product.sell_price_nok;
+    const subtotal = unitPrice * Number(quantity);
+    const shipping = product.shipping_price_nok || 0;
+    const vat = Math.round((subtotal + shipping) * 0.25 * 100) / 100;
+    const total = subtotal + shipping + vat;
+
+    const demoIntentId = 'demo_' + Date.now();
+    const addressStr = JSON.stringify({ name, line1: address, city, postal_code: postal, country: 'NO' });
+
+    // Try CJ order
+    let cjOrderId = null;
+    let cjError = null;
+    try {
+      const cjRes = await cjCreateOrder({
+        orderNumber: demoIntentId,
+        shippingZip: postal || '',
+        shippingCountryCode: 'NO',
+        shippingCountry: 'Norway',
+        shippingCity: city || '',
+        shippingAddress: address || '',
+        shippingCustomerName: name,
+        shippingPhone: '00000000',
+        remark: 'DEMO ORDER',
+        products: [{
+          vid: variantId || '',
+          pid: productId,
+          quantity: Number(quantity),
+          shippingName: 'CJPacket_NL_NO'
+        }]
+      });
+      if (cjRes.result) cjOrderId = cjRes.data?.orderId || null;
+      else cjError = cjRes.message || JSON.stringify(cjRes);
+    } catch (e) {
+      cjError = e.message;
+      console.error('Demo CJ order failed:', e.message);
+    }
+
+    db.prepare(`
+      INSERT INTO orders (stripe_payment_intent, cj_order_id, status, customer_name, customer_email,
+        customer_address, product_id, product_name, variant, quantity,
+        unit_price_nok, shipping_nok, vat_nok, total_nok)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      demoIntentId, cjOrderId, cjOrderId ? 'processing' : 'pending_fulfillment',
+      name, email, addressStr, productId, product.name,
+      variantId || null, Number(quantity),
+      unitPrice, shipping, vat, total
+    );
+
+    await sendOrderConfirmation({ to: email, name, product: product.name, quantity: Number(quantity), total });
+
+    res.json({ ok: true, orderId: demoIntentId, cjOrderId, cjError, total });
+  } catch (err) { next(err); }
+});
+
 // Get tracking info for an order
 router.get('/track/:paymentIntent', async (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE stripe_payment_intent = ?').get(req.params.paymentIntent);
