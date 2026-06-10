@@ -71,9 +71,13 @@ function renderProduct(p) {
   images.forEach((url, i) => {
     const img = document.createElement('img');
     img.src = url; img.className = 'thumb' + (i === 0 ? ' active' : '');
+    img.onerror = () => { img.style.display = 'none'; };
+    img.onload = () => { if (i === 0) mainImg.src = url; };
     img.onclick = () => { mainImg.src = url; document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active')); img.classList.add('active'); };
     thumbContainer.appendChild(img);
   });
+  // Main image fallback: if first fails, use first that loads
+  mainImg.onerror = () => { const first = thumbContainer.querySelector('img[style=""],.thumb'); if (first) mainImg.src = first.src; };
 
   // Description
   document.getElementById('product-description').innerHTML = p.description || '';
