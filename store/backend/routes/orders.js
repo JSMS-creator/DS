@@ -80,26 +80,23 @@ async function fulfillOrder(intent) {
   try {
     const cjRes = await cjCreateOrder({
       orderNumber: intent.id,
+      logisticName: 'CJPacket_Registered',
       fromCountryCode: 'CN',
-      shippingZip: addressParts.postal_code,
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',
       shippingProvince: '',
       shippingCity: addressParts.city,
       shippingAddress: addressParts.line1,
       shippingAddress2: '',
+      shippingZip: addressParts.postal_code,
       shippingCustomerName: customer.name,
       shippingPhone: intent.shipping?.phone || '00000000',
+      email: intent.receipt_email || '',
       remark: '',
-      products: [{
-        vid: variantId || '',
-        pid: productId,
-        quantity: Number(quantity),
-        logisticName: 'CJPacket_Registered',
-        fromCountryCode: 'CN'
-      }]
+      products: [{ vid: variantId || '', quantity: Number(quantity) }]
     });
     if (cjRes.result) cjOrderId = cjRes.data.orderId;
+    else console.error('CJ order failed:', JSON.stringify(cjRes));
   } catch (e) {
     console.error('CJ order failed:', e.message);
   }
@@ -154,27 +151,24 @@ router.post('/demo-checkout', async (req, res, next) => {
     try {
       const cjRes = await cjCreateOrder({
         orderNumber: demoIntentId,
+        logisticName: 'CJPacket_Registered',
         fromCountryCode: 'CN',
-        shippingZip: postal || '',
         shippingCountryCode: 'NO',
         shippingCountry: 'Norway',
         shippingProvince: '',
         shippingCity: city || '',
         shippingAddress: address || '',
         shippingAddress2: '',
+        shippingZip: postal || '',
         shippingCustomerName: name,
         shippingPhone: '00000000',
+        email: email || '',
         remark: 'DEMO ORDER',
-        products: [{
-          vid: variantId || '',
-          pid: productId,
-          quantity: Number(quantity),
-          logisticName: 'CJPacket_Registered',
-        fromCountryCode: 'CN'
-        }]
+        products: [{ vid: variantId || '', quantity: Number(quantity) }]
       });
       if (cjRes.result) cjOrderId = cjRes.data?.orderId || null;
       else cjError = cjRes.message || JSON.stringify(cjRes);
+      console.log('[demo-checkout] CJ response:', JSON.stringify(cjRes).slice(0, 500));
     } catch (e) {
       cjError = e.message;
       console.error('Demo CJ order failed:', e.message);

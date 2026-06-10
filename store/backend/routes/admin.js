@@ -139,27 +139,28 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
     if (!order) return res.status(404).json({ error: 'Not found' });
 
     const address = JSON.parse(order.customer_address || '{}');
-    const cjRes = await cjCreateOrder({
+    const cjPayload = {
       orderNumber: order.stripe_payment_intent,
+      logisticName: 'CJPacket_Registered',
       fromCountryCode: 'CN',
-      shippingZip: address.postal_code || '',
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',
       shippingProvince: '',
       shippingCity: address.city || '',
       shippingAddress: address.line1 || '',
       shippingAddress2: '',
+      shippingZip: address.postal_code || '',
       shippingCustomerName: order.customer_name,
       shippingPhone: '00000000',
+      email: order.customer_email || '',
       remark: '',
       products: [{
         vid: order.variant || '',
-        pid: order.product_id,
-        quantity: order.quantity,
-        logisticName: 'CJPacket_Registered',
-        fromCountryCode: 'CN'
+        quantity: order.quantity
       }]
-    });
+    };
+    console.log('[fulfill] CJ payload:', JSON.stringify(cjPayload));
+    const cjRes = await cjCreateOrder(cjPayload);
     console.log('[fulfill] CJ response:', JSON.stringify(cjRes).slice(0, 500));
 
     let cjOrderId = null;
