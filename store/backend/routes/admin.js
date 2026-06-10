@@ -64,7 +64,7 @@ router.post('/products', (req, res) => {
       name = excluded.name, description = excluded.description,
       variants = excluded.variants, images = excluded.images,
       buy_price_usd = excluded.buy_price_usd, sell_price_nok = excluded.sell_price_nok,
-      shipping_price_nok = excluded.shipping_price_nok, updated_at = datetime('now')
+      shipping_price_nok = excluded.shipping_price_nok, active = 1, updated_at = datetime('now')
   `).run(cj_product_id, name, description, JSON.stringify(variants || []), JSON.stringify(images || []), buy_price_usd, sell_price_nok, shipping_price_nok || 0);
   res.json({ ok: true });
 });
