@@ -126,6 +126,11 @@
         <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" />
         <input id="p-shipping" placeholder="Frakt NOK (0 = gratis)" type="number" step="1" />
         <input id="p-images" placeholder="Bilde-URLer, kommaseparert" />
+        <div id="p-variants-box" style="display:none;margin-bottom:12px">
+          <div style="font-size:0.8rem;color:#666;margin-bottom:6px;font-weight:600">Varianter importert:</div>
+          <div id="p-variants-preview" style="font-size:0.8rem;color:#444"></div>
+          <input type="hidden" id="p-variants-json" value="[]" />
+        </div>
         <button class="btn-primary" onclick="saveProduct()">Lagre produkt</button>
         <span id="p-save-msg" style="margin-left:12px;font-size:0.85rem;color:green"></span>
       </div>
@@ -231,6 +236,8 @@ async function loadProducts() {
 }
 
 async function saveProduct() {
+  let variants = [];
+  try { variants = JSON.parse(document.getElementById('p-variants-json').value || '[]'); } catch {}
   const data = {
     cj_product_id: document.getElementById('p-cj-id').value.trim(),
     name: document.getElementById('p-name').value.trim(),
@@ -239,7 +246,7 @@ async function saveProduct() {
     sell_price_nok: parseFloat(document.getElementById('p-sell').value),
     shipping_price_nok: parseFloat(document.getElementById('p-shipping').value) || 0,
     images: document.getElementById('p-images').value.replace(/[\[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean),
-    variants: []
+    variants
   };
   if (!data.cj_product_id || !data.name || !data.sell_price_nok) { alert('Fyll inn CJ ID, navn og salgspris.'); return; }
   await api('/admin/products', { method: 'POST', body: JSON.stringify(data) });
@@ -338,7 +345,7 @@ async function searchCJ() {
           </div>
           <div class="cj-product-actions">
             <button class="btn-secondary btn-sm" onclick="openDetailModal('${p.pid}')">Detaljer</button>
-            <button class="btn-primary btn-sm" onclick="importFromCache('${p.pid}')">Importer</button>
+            <button class="btn-primary btn-sm" onclick="importWithDetails('${p.pid}')">Importer</button>
           </div>
         </div>`;
       }).join('')
@@ -396,7 +403,7 @@ async function openDetailModal(pid) {
       ${p.description ? `<details style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:600;margin-bottom:8px">Produktbeskrivelse</summary><div style="font-size:0.85rem;color:#444;line-height:1.6">${p.description}</div></details>` : ''}
 
       <div style="display:flex;gap:12px">
-        <button class="btn-primary" style="flex:1" onclick="importFromCache('${pid}');closeDetailModal()">
+        <button class="btn-primary" style="flex:1" onclick="importWithDetails('${pid}');closeDetailModal()">
           Importer til butikk
         </button>
         <button class="btn-secondary" onclick="closeDetailModal()">Lukk</button>
@@ -448,15 +455,63 @@ function importFromCache(pid) {
   showPage('products', null);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelector('[onclick*="products"]').classList.add('active');
+  // Extract images embedded in CJ description HTML
+  const descHtml = p.description || '';
+  const descImgUrls = [...descHtml.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)]
+    .map(m => m[1]).filter(u => u.startsWith('http'));
+  const allImages = [...new Set([...uniqueImages, ...descImgUrls])];
+
+  // Variants from detail modal fetch (p._variants) or search cache
+  const variants = p._variants || [];
+
   document.getElementById('p-cj-id').value = pid;
   document.getElementById('p-name').value = name;
   document.getElementById('p-buy').value = price;
   document.getElementById('p-sell').value = Math.round(price * 10.5 * 1.25);
-  document.getElementById('p-images').value = uniqueImages.join(', ');
-  // Pre-fill description if available (raw English from CJ)
-  const rawDesc = (p.description || '').replace(/<[^>]+>/g, ' ').trim();
-  document.getElementById('p-desc').value = rawDesc;
+  document.getElementById('p-images').value = allImages.join(', ');
+  // Pre-fill description HTML from CJ (keep img tags for store display)
+  document.getElementById('p-desc').value = descHtml;
+
+  // Variants
+  const varBox = document.getElementById('p-variants-box');
+  const varPreview = document.getElementById('p-variants-preview');
+  const varJson = document.getElementById('p-variants-json');
+  if (variants.length) {
+    varJson.value = JSON.stringify(variants);
+    varPreview.innerHTML = variants.map(v =>
+      `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0">
+        ${v.variantNameEn || v.variantName || '—'}
+        <span style="color:#999;margin-left:8px">$${v.variantSellPrice || v.sellPrice || '?'}</span>
+        <span style="color:#2563eb;margin-left:8px">→ NOK ${Math.round((parseFloat(v.variantSellPrice || v.sellPrice || 0)) * 10.5 * 1.25)}</span>
+      </div>`
+    ).join('');
+    varBox.style.display = 'block';
+  } else {
+    varJson.value = '[]';
+    varBox.style.display = 'none';
+  }
+
   document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function importWithDetails(pid) {
+  // If we already have full details (from modal), import directly
+  if (cjProductCache[pid]?._variants !== undefined) {
+    importFromCache(pid);
+    return;
+  }
+  // Otherwise fetch full details first
+  try {
+    const data = await api(`/admin/cj/product/${pid}`);
+    const p = data.product || {};
+    const variants = data.variants || [];
+    let imgSet = p.productImageSet || [];
+    if (typeof imgSet === 'string') { try { imgSet = JSON.parse(imgSet); } catch { imgSet = []; } }
+    const images = [p.productImage, ...imgSet].filter(Boolean);
+    const uniqueImages = [...new Set(images.map(u => u.replace(/[\[\]"]/g, '').trim()).filter(Boolean))];
+    cjProductCache[pid] = { ...cjProductCache[pid], ...p, _allImages: uniqueImages, _variants: variants };
+  } catch {}
+  importFromCache(pid);
 }
 
 async function generateDescription() {
