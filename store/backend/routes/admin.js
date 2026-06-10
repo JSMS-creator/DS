@@ -163,7 +163,8 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
       db.prepare("UPDATE orders SET cj_order_id = ?, status = 'processing', updated_at = datetime('now') WHERE id = ?")
         .run(cjOrderId, order.id);
     } else {
-      return res.status(500).json({ error: 'CJ order failed', detail: cjRes });
+      const cjMsg = cjRes.message || cjRes.msg || JSON.stringify(cjRes).slice(0, 300);
+      return res.status(500).json({ error: cjMsg, rawCj: cjRes });
     }
 
     res.json({ ok: true, cjOrderId });

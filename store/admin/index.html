@@ -472,7 +472,7 @@ async function fulfillOrder(id) {
   msg.style.color = '#666'; msg.textContent = 'Sender til CJ...';
   const res = await api('/admin/orders/' + id + '/fulfill', { method: 'POST' });
   if (res.ok) { msg.style.color = 'green'; msg.textContent = '✓ CJ-ordre opprettet: ' + res.cjOrderId; await loadOrders(); }
-  else { msg.style.color = 'red'; msg.textContent = 'Feil: ' + (res.error || JSON.stringify(res)); }
+  else { msg.style.color = 'red'; msg.textContent = 'CJ-feil: ' + (res.error || JSON.stringify(res.rawCj || res).slice(0, 300)); }
 }
 
 async function checkTracking(id) {

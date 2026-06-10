@@ -365,7 +365,7 @@ async function submitPayment() {
       return;
     }
     closeCheckout();
-    showOrderSuccess(name, email, data.total);
+    showOrderSuccess(name, email, data.total, data.emailError, data.cjError);
   } catch (e) {
     showPaymentMessage('Nettverksfeil. Prøv igjen.');
     btn.disabled = false;
@@ -373,7 +373,7 @@ async function submitPayment() {
   }
 }
 
-function showOrderSuccess(name, email, total) {
+function showOrderSuccess(name, email, total, emailError, cjError) {
   document.getElementById('product-section').style.display = 'none';
   const el = document.getElementById('order-success');
   if (el) {
@@ -384,6 +384,15 @@ function showOrderSuccess(name, email, total) {
     if (nameEl) nameEl.textContent = name;
     if (emailEl) emailEl.textContent = email;
     if (totalEl) totalEl.textContent = 'NOK ' + formatPrice(total);
+    // Show debug warnings if something failed (only visible in dev/demo)
+    const debugEl = document.getElementById('success-debug');
+    if (debugEl) {
+      const msgs = [];
+      if (emailError) msgs.push('⚠️ E-post feil: ' + emailError);
+      if (cjError) msgs.push('⚠️ CJ-feil: ' + cjError);
+      debugEl.style.display = msgs.length ? 'block' : 'none';
+      debugEl.textContent = msgs.join(' | ');
+    }
   }
 }
 

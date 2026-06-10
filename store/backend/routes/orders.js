@@ -184,9 +184,16 @@ router.post('/demo-checkout', async (req, res, next) => {
       unitPrice, shipping, vat, total
     );
 
-    await sendOrderConfirmation({ to: email, name, product: product.name, quantity: Number(quantity), total });
+    let emailError = null;
+    try {
+      await sendOrderConfirmation({ to: email, name, product: product.name, quantity: Number(quantity), total });
+      console.log('[demo-checkout] Confirmation email sent to', email);
+    } catch (e) {
+      emailError = e.message;
+      console.error('[demo-checkout] Email failed:', e.message);
+    }
 
-    res.json({ ok: true, orderId: demoIntentId, cjOrderId, cjError, total });
+    res.json({ ok: true, orderId: demoIntentId, cjOrderId, cjError, emailError, total });
   } catch (err) { next(err); }
 });
 
