@@ -659,11 +659,10 @@ async function importFromUrl() {
   const msg = document.getElementById('cj-url-msg');
   if (!input) return;
 
-  // Extract product ID from URL or use as-is if looks like an ID
+  // Extract product ID from URL or use as-is if it looks like an ID
   let pid = input;
-  const urlMatch = input.match(/[?&](?:pid|productId)=([^&]+)/) ||
-                   input.match(/\/product\/[^-]+-p-(\d+)\.html/) ||
-                   input.match(/\/(\d{15,})/);
+  const urlMatch = input.match(/-p-(\d+)\.html/) ||
+                   input.match(/[?&](?:pid|productId)=([^&]+)/);
   if (urlMatch) pid = urlMatch[1];
   pid = pid.trim();
 
