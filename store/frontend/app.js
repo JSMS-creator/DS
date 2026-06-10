@@ -151,13 +151,27 @@ function renderProduct(p) {
   }
 }
 
+function shortVariantName(fullName, productName) {
+  if (!fullName) return fullName;
+  // Strip product name prefix (CJ includes it in variant names)
+  let s = fullName;
+  if (productName) {
+    const stripped = s.replace(new RegExp('^' + productName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').trim();
+    if (stripped) s = stripped;
+  }
+  // Normalise runs of spaces/CamelCase separators left behind
+  // e.g. "Light BlueGreenLightGray L" → "Light Blue / Green / Light Gray — L"
+  // Just clean up excess whitespace for now; the name is already shorter
+  return s.replace(/\s+/g, ' ').trim() || fullName;
+}
+
 function renderVariants(variants) {
   const container = document.getElementById('variant-buttons');
   container.innerHTML = '';
   variants.forEach((v, i) => {
     const btn = document.createElement('button');
     btn.className = 'variant-btn' + (i === 0 ? ' selected' : '');
-    btn.textContent = v.variantNameEn || v.name || v.id;
+    btn.textContent = shortVariantName(v.variantNameEn || v.name || v.id, currentProduct?.name);
     btn.onclick = () => {
       selectedVariant = v;
       document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
