@@ -417,7 +417,7 @@ async function openDetailModal(pid) {
   try {
     const data = await api(`/admin/cj/product/${pid}`);
     const p = data.product || {};
-    const variants = data.variants || [];
+    const variants = mapCjVariants(data.variants || []);
     let imgSet = p.productImageSet || [];
     if (typeof imgSet === 'string') { try { imgSet = JSON.parse(imgSet); } catch { imgSet = []; } }
     const images = [p.productImage, ...imgSet].filter(Boolean);
@@ -551,7 +551,7 @@ async function importWithDetails(pid) {
   try {
     const data = await api(`/admin/cj/product/${pid}`);
     const p = data.product || {};
-    const variants = data.variants || [];
+    const variants = mapCjVariants(data.variants || []);
     let imgSet = p.productImageSet || [];
     if (typeof imgSet === 'string') { try { imgSet = JSON.parse(imgSet); } catch { imgSet = []; } }
     const images = [p.productImage, ...imgSet].filter(Boolean);
@@ -658,6 +658,15 @@ function undoAI() {
 }
 
 // ── VARIANT EDITOR ────────────────────────────────────────────
+
+// CJ API uses variantSellPrice for USD buy price — remap to our fields
+function mapCjVariants(cjVariants) {
+  return cjVariants.map(v => ({
+    variantNameEn: v.variantNameEn || v.variantName || '',
+    variantBuyPriceUsd: parseFloat(v.variantSellPrice || v.sellPrice || 0),
+    variantSku: v.variantSku || '',
+  }));
+}
 
 function renderVariantRows(variants) {
   const tbody = document.getElementById('p-variants-tbody');
