@@ -153,7 +153,8 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
         vid: order.variant || '',
         pid: order.product_id,
         quantity: order.quantity,
-        shippingName: 'CJPacket_NL_NO'
+        shippingName: 'CJPacket_Registered',
+        fromCountryCode: 'CN'
       }]
     });
 

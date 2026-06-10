@@ -92,7 +92,8 @@ async function fulfillOrder(intent) {
         vid: variantId || '',
         pid: productId,
         quantity: Number(quantity),
-        shippingName: 'CJPacket_NL_NO'
+        shippingName: 'CJPacket_Registered',
+        fromCountryCode: 'CN'
       }]
     });
     if (cjRes.result) cjOrderId = cjRes.data.orderId;
@@ -162,7 +163,8 @@ router.post('/demo-checkout', async (req, res, next) => {
           vid: variantId || '',
           pid: productId,
           quantity: Number(quantity),
-          shippingName: 'CJPacket_NL_NO'
+          shippingName: 'CJPacket_Registered',
+        fromCountryCode: 'CN'
         }]
       });
       if (cjRes.result) cjOrderId = cjRes.data?.orderId || null;
