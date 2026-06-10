@@ -1,33 +1,6 @@
 const API = 'https://thorough-charm-production-ecb9.up.railway.app/api';
 const STRIPE_PK = 'pk_test_demo';
 
-// Demo product — replace with real API call when backend is deployed
-const DEMO_PRODUCT = {
-  cj_product_id: 'DEMO-DOG-COVER-001',
-  name: 'PawGuard Bilseteovertrukk for Hund',
-  description: `<ul>
-    <li>🐾 Vanntett Oxford-stoff — beskytter mot smuss, hår og vann</li>
-    <li>🔒 Hengekøye-design — holder hunden trygg og rolig under kjøring</li>
-    <li>🚗 Universell passform — passer alle biler, SUV-er og varebiler</li>
-    <li>🧺 Maskinvaskbar — enkelt å holde ren</li>
-    <li>⚡ Enkel montering — festestropper på hodestøtter, ingen verktøy</li>
-    <li>🌿 Slitesterk og langvarig — spar penger på bilseterens</li>
-  </ul>
-  <p>Perfekt for turer til hytta, skogstur eller daglig kjøring med hunden!</p>`,
-  variants: [
-    { vid: 'v1', variantNameEn: 'Svart — Standard', variantSellPrice: 319 },
-    { vid: 'v2', variantNameEn: 'Grå — Standard', variantSellPrice: 319 },
-    { vid: 'v3', variantNameEn: 'Svart — XL (SUV)', variantSellPrice: 359 }
-  ],
-  images: [
-    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80',
-    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80',
-    'https://images.unsplash.com/photo-1452378174528-3090a4bba7b2?w=800&q=80'
-  ],
-  sell_price_nok: 319,
-  shipping_price_nok: 0
-};
-
 let stripe, elements, paymentElement;
 let currentProduct = null;
 let selectedVariant = null;
@@ -131,12 +104,12 @@ function applySettings(s) {
 async function loadProduct() {
   try {
     const res = await fetch(`${API}/products`);
+    if (!res.ok) throw new Error('Backend utilgjengelig');
     const products = await res.json();
-    if (!products.length) return showError('Ingen produkter tilgjengelig.');
+    if (!products.length) return showError('Ingen aktive produkter. Legg til et produkt i admin.');
     renderProduct(products[0]);
   } catch {
-    // Fallback to demo product if backend is unreachable
-    renderProduct(DEMO_PRODUCT);
+    showError('Kunne ikke laste produkt. Sjekk at backend er oppe og at et produkt er aktivert i admin.');
   }
 }
 
