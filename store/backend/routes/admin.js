@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { searchProducts, getProduct, getProductVariants, getCategories } from '../cj.js';
+import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
 
@@ -73,6 +74,34 @@ router.post('/products', (req, res) => {
 router.patch('/products/:id/toggle', (req, res) => {
   db.prepare('UPDATE products SET active = 1 - active WHERE cj_product_id = ?').run(req.params.id);
   res.json({ ok: true });
+});
+
+// AI: translate/rewrite product description to Norwegian
+router.post('/ai/describe', async (req, res, next) => {
+  try {
+    const { name, description, price } = req.body;
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY ikke satt' });
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const prompt = `Du er en norsk nettbutikk-copywriter. Skriv en kort, selgende produktbeskrivelse på norsk (maks 120 ord) for dette produktet:
+
+Navn: ${name}
+Pris: NOK ${price}
+Original beskrivelse (engelsk): ${(description || '').replace(/<[^>]+>/g, ' ').slice(0, 800)}
+
+Regler:
+- Skriv på naturlig, hverdagslig norsk
+- Fremhev de viktigste fordelene
+- Bruk korte setninger og litt entusiasme
+- IKKE bruk engelske ord unødvendig
+- Returner kun selve beskrivelsesteksten, ingen tittel eller overskrift`;
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    res.json({ description: msg.content[0].text });
+  } catch (err) { next(err); }
 });
 
 // Dashboard stats

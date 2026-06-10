@@ -118,7 +118,10 @@
         <h3>Legg til / oppdater produkt manuelt</h3>
         <input id="p-cj-id" placeholder="CJ Product ID *" />
         <input id="p-name" placeholder="Produktnavn *" />
-        <textarea id="p-desc" rows="4" placeholder="Beskrivelse (HTML ok)"></textarea>
+        <div style="position:relative">
+          <textarea id="p-desc" rows="4" placeholder="Beskrivelse (HTML ok)" style="padding-right:160px"></textarea>
+          <button class="btn-secondary btn-sm" id="ai-btn" onclick="generateDescription()" style="position:absolute;top:10px;right:10px;white-space:nowrap">✨ Norsk med AI</button>
+        </div>
         <input id="p-buy" placeholder="CJ Kjøpspris (USD)" type="number" step="0.01" />
         <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" />
         <input id="p-shipping" placeholder="Frakt NOK (0 = gratis)" type="number" step="1" />
@@ -450,7 +453,36 @@ function importFromCache(pid) {
   document.getElementById('p-buy').value = price;
   document.getElementById('p-sell').value = Math.round(price * 10.5 * 1.25);
   document.getElementById('p-images').value = uniqueImages.join(', ');
+  // Pre-fill description if available (raw English from CJ)
+  const rawDesc = (p.description || '').replace(/<[^>]+>/g, ' ').trim();
+  document.getElementById('p-desc').value = rawDesc;
   document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function generateDescription() {
+  const name = document.getElementById('p-name').value.trim();
+  const desc = document.getElementById('p-desc').value.trim();
+  const price = document.getElementById('p-sell').value;
+  if (!name) { alert('Fyll inn produktnavn først.'); return; }
+  const btn = document.getElementById('ai-btn');
+  btn.textContent = '⏳ Genererer...';
+  btn.disabled = true;
+  try {
+    const result = await api('/admin/ai/describe', {
+      method: 'POST',
+      body: JSON.stringify({ name, description: desc, price })
+    });
+    if (result.description) {
+      document.getElementById('p-desc').value = result.description;
+    } else {
+      alert('Feil: ' + (result.error || 'Ukjent feil'));
+    }
+  } catch (err) {
+    alert('Nettverksfeil: ' + err.message);
+  } finally {
+    btn.textContent = '✨ Norsk med AI';
+    btn.disabled = false;
+  }
 }
 </script>
 </body>
