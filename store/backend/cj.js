@@ -39,7 +39,9 @@ export async function getProduct(pid) {
 }
 
 export async function searchProducts(query, page = 1, pageSize = 20) {
-  return cjRequest(`/product/list?productNameEn=${encodeURIComponent(query)}&countryCode=NO&pageNum=${page}&pageSize=${pageSize}`);
+  const result = await cjRequest(`/product/list?productNameEn=${encodeURIComponent(query)}&pageNum=${page}&pageSize=${pageSize}`);
+  console.log('CJ search result:', JSON.stringify(result).slice(0, 300));
+  return result;
 }
 
 export async function getProductVariants(pid) {
