@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { searchProducts, getProduct, getProductVariants } from '../cj.js';
+import { searchProducts, getProduct, getProductVariants, getCategories } from '../cj.js';
 
 const router = Router();
 
@@ -25,12 +25,20 @@ router.patch('/orders/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Get CJ categories
+router.get('/cj/categories', async (req, res, next) => {
+  try {
+    const result = await getCategories();
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 // Search CJ products
 router.get('/cj/search', async (req, res, next) => {
   try {
-    const { q, page } = req.query;
-    if (!q) return res.json({ data: { list: [] } });
-    const result = await searchProducts(q, page || 1);
+    const { q, page, categoryId } = req.query;
+    if (!q && !categoryId) return res.json({ data: { list: [] } });
+    const result = await searchProducts(q || '', page || 1, 20, categoryId);
     res.json(result);
   } catch (err) { next(err); }
 });

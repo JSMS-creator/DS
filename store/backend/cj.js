@@ -38,10 +38,17 @@ export async function getProduct(pid) {
   return cjRequest(`/v1/product/query?pid=${pid}`);
 }
 
-export async function searchProducts(query, page = 1, pageSize = 20) {
-  const result = await cjRequest(`/v1/product/list?productNameEn=${encodeURIComponent(query)}&pageNum=${page}&pageSize=${pageSize}`);
+export async function searchProducts(query, page = 1, pageSize = 20, categoryId = '') {
+  let url = `/v1/product/list?pageNum=${page}&pageSize=${pageSize}`;
+  if (query) url += `&productNameEn=${encodeURIComponent(query)}`;
+  if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+  const result = await cjRequest(url);
   console.log('CJ search result:', JSON.stringify(result).slice(0, 300));
   return result;
+}
+
+export async function getCategories() {
+  return cjRequest('/v1/product/getCategory');
 }
 
 export async function getProductVariants(pid) {
