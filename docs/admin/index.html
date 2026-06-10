@@ -159,6 +159,7 @@
               <th style="padding:6px 8px;text-align:left;border:1px solid #eee">USD</th>
               <th style="padding:6px 8px;text-align:left;border:1px solid #eee">NOK</th>
               <th style="padding:6px 8px;border:1px solid #eee">SKU</th>
+              <th style="padding:6px 8px;border:1px solid #eee">Bilde</th>
               <th style="padding:6px 8px;border:1px solid #eee"></th>
             </tr></thead>
             <tbody id="p-variants-tbody"></tbody>
@@ -597,6 +598,59 @@ function bulkVariantMarkup() {
   bulkVariantMarkupWithPct(pct);
 }
 
+function pickVariantImage(el) {
+  const td = el.closest('td');
+  const hidden = td.querySelector('input[type=hidden]');
+  const imgUrls = document.getElementById('p-images').value
+    .replace(/[\[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!imgUrls.length) {
+    const url = prompt('Lim inn bilde-URL for varianten:');
+    if (url) { hidden.value = url; syncVariantsJson(); updateVariantImgPreview(td, url); }
+    return;
+  }
+  // Build a mini picker overlay
+  const existing = document.getElementById('variant-img-picker');
+  if (existing) existing.remove();
+  const picker = document.createElement('div');
+  picker.id = 'variant-img-picker';
+  picker.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center';
+  picker.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;max-width:480px;width:90%">
+    <div style="font-weight:600;margin-bottom:12px">Velg bilde for variant</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      ${imgUrls.map(u => `<img src="${u}" data-url="${u}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='transparent'" onerror="this.style.display='none'" onclick="setVariantImage(this.dataset.url)" />`).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="vip-url" placeholder="Eller lim inn URL direkte" style="flex:1;margin:0;padding:8px 10px;font-size:0.85rem" />
+      <button class="btn-secondary btn-sm" onclick="setVariantImage(document.getElementById('vip-url').value)">OK</button>
+      <button class="btn-secondary btn-sm" onclick="document.getElementById('variant-img-picker').remove()">Avbryt</button>
+    </div>
+  </div>`;
+  picker._targetTd = td;
+  document.body.appendChild(picker);
+  picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
+}
+
+function setVariantImage(url) {
+  url = url?.trim();
+  if (!url) return;
+  const picker = document.getElementById('variant-img-picker');
+  const td = picker._targetTd;
+  picker.remove();
+  const hidden = td.querySelector('input[type=hidden]');
+  hidden.value = url;
+  updateVariantImgPreview(td, url);
+  syncVariantsJson();
+}
+
+function updateVariantImgPreview(td, url) {
+  let img = td.querySelector('img');
+  if (img) { img.src = url; img.style.display = ''; }
+  else {
+    const btn = td.querySelector('button');
+    if (btn) { btn.outerHTML = `<img src="${url}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:pointer" onclick="pickVariantImage(this)" onerror="this.style.display='none'" />`; }
+  }
+}
+
 function bulkVariantUsd() {
   const usd = parseFloat(document.getElementById('v-bulk-usd').value);
   if (!usd) return;
@@ -678,6 +732,7 @@ function mapCjVariants(cjVariants) {
   return cjVariants.map(v => ({
     variantNameEn: v.variantNameEn || v.variantName || '',
     variantBuyPriceUsd: parseFloat(v.variantSellPrice || v.sellPrice || 0),
+    variantImage: v.variantImage || v.productImage || '',
     variantSku: v.variantSku || '',
   }));
 }
@@ -695,11 +750,16 @@ function addVariantRow(v = {}) {
   const pct = parseFloat(document.getElementById('p-markup')?.value) || 300;
   const nok = v.variantSellPrice || (usd ? calcNok(usd, pct) : '');
   const tr = document.createElement('tr');
+  const imgUrl = v.variantImage || '';
   tr.innerHTML = `
     <td style="padding:4px;border:1px solid #eee"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantNameEn || v.variantName || ''}" placeholder="Navn" oninput="syncVariantsJson()" /></td>
     <td style="padding:4px;border:1px solid #eee;width:70px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" type="number" step="0.01" value="${usd || ''}" placeholder="USD" oninput="autoNok(this);syncVariantsJson()" /></td>
     <td style="padding:4px;border:1px solid #eee;width:70px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" type="number" step="1" value="${nok || ''}" placeholder="NOK" oninput="syncVariantsJson()" /></td>
-    <td style="padding:4px;border:1px solid #eee;width:110px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantSku || ''}" placeholder="SKU" oninput="syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;width:100px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantSku || ''}" placeholder="SKU" oninput="syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;width:60px;text-align:center">
+      ${imgUrl ? `<img src="${imgUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:pointer" title="${imgUrl}" onclick="pickVariantImage(this)" onerror="this.style.display='none'" />` : `<button class="btn-secondary btn-sm" style="padding:2px 6px;font-size:0.75rem" onclick="pickVariantImage(this)">+</button>`}
+      <input type="hidden" value="${imgUrl}" oninput="syncVariantsJson()" />
+    </td>
     <td style="padding:4px;border:1px solid #eee;text-align:center"><button class="btn-secondary btn-sm" style="padding:4px 8px;color:#c00" onclick="this.closest('tr').remove();syncVariantsJson()">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -722,7 +782,8 @@ function syncVariantsJson() {
       variantNameEn: inputs[0].value.trim(),
       variantBuyPriceUsd: parseFloat(inputs[1].value) || 0,
       variantSellPrice: parseFloat(inputs[2].value) || 0,  // NOK — this is what the store displays
-      variantSku: inputs[3].value.trim()
+      variantSku: inputs[3].value.trim(),
+      variantImage: inputs[4].value.trim()
     };
   }).filter(v => v.variantNameEn);
   document.getElementById('p-variants-json').value = JSON.stringify(variants);

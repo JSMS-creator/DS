@@ -104,6 +104,14 @@ function renderVariants(variants) {
       if (v.variantSellPrice) {
         document.getElementById('price-display').textContent = 'NOK ' + formatPrice(totalPriceInclVat(v.variantSellPrice, currentProduct.shipping_price_nok));
       }
+      // Switch main image if variant has one
+      if (v.variantImage) {
+        const mainImg = document.getElementById('hero-main-img');
+        mainImg.src = v.variantImage;
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        const match = [...document.querySelectorAll('.thumb')].find(t => t.src === v.variantImage);
+        if (match) match.classList.add('active');
+      }
     };
     container.appendChild(btn);
   });
