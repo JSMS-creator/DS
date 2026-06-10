@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { searchProducts, getProduct, getProductVariants, getCategories } from '../cj.js';
-import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
 
@@ -76,12 +75,11 @@ router.patch('/products/:id/toggle', (req, res) => {
   res.json({ ok: true });
 });
 
-// AI: translate/rewrite product description to Norwegian
+// AI: translate/rewrite product description to Norwegian using Gemini
 router.post('/ai/describe', async (req, res, next) => {
   try {
     const { name, description, price } = req.body;
-    if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY ikke satt' });
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_API_KEY ikke satt i Railway Variables' });
     const prompt = `Du er en norsk nettbutikk-copywriter. Skriv en kort, selgende produktbeskrivelse på norsk (maks 120 ord) for dette produktet:
 
 Navn: ${name}
@@ -95,12 +93,15 @@ Regler:
 - IKKE bruk engelske ord unødvendig
 - Returner kun selve beskrivelsesteksten, ingen tittel eller overskrift`;
 
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }]
-    });
-    res.json({ description: msg.content[0].text });
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+    );
+    const data = await r.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return res.status(500).json({ error: 'Gemini svarte ikke: ' + JSON.stringify(data).slice(0, 200) });
+    res.json({ description: text });
   } catch (err) { next(err); }
 });
 
