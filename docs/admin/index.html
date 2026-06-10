@@ -377,9 +377,9 @@ async function loadProducts() {
           <small style="color:#666">CJ ID: ${p.cj_product_id} · NOK ${p.sell_price_nok} · ${Array.isArray(p.variants) ? p.variants.length : 0} varianter</small>
         </div>
         <div style="display:flex;gap:8px">
-          ${!p.active ? `<button class="btn-primary btn-sm" onclick="setActiveProduct('${p.cj_product_id}')">Sett aktiv</button>` : ''}
+          ${!p.active ? `<button class="btn-primary btn-sm" onclick="setActiveProduct('${p.cj_product_id}')">Aktiver</button>` : ''}
           <button class="btn-secondary btn-sm" onclick="editProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">Rediger</button>
-          <button class="btn-secondary btn-sm" onclick="toggleProduct('${p.cj_product_id}')">${p.active ? 'Deaktiver' : 'Aktiver'}</button>
+          ${p.active ? `<button class="btn-secondary btn-sm" onclick="toggleProduct('${p.cj_product_id}')">Deaktiver</button>` : ''}
         </div>
       </div>`).join('')
     : '<p style="color:#666">Ingen produkter ennå. Legg til via skjemaet over.</p>';
