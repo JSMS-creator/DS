@@ -35,30 +35,30 @@ async function cjRequest(path, options = {}) {
 }
 
 export async function getProduct(pid) {
-  return cjRequest(`/product/query?pid=${pid}`);
+  return cjRequest(`/v1/product/query?pid=${pid}`);
 }
 
 export async function searchProducts(query, page = 1, pageSize = 20) {
-  const result = await cjRequest(`/product/list?productNameEn=${encodeURIComponent(query)}&pageNum=${page}&pageSize=${pageSize}`);
+  const result = await cjRequest(`/v1/product/list?productNameEn=${encodeURIComponent(query)}&pageNum=${page}&pageSize=${pageSize}`);
   console.log('CJ search result:', JSON.stringify(result).slice(0, 300));
   return result;
 }
 
 export async function getProductVariants(pid) {
-  return cjRequest(`/product/variant/query?pid=${pid}`);
+  return cjRequest(`/v1/product/variant/query?pid=${pid}`);
 }
 
 export async function createOrder(orderData) {
-  return cjRequest('/shopping/order/createOrderV2', {
+  return cjRequest('/v1/shopping/order/createOrderV2', {
     method: 'POST',
     body: JSON.stringify(orderData)
   });
 }
 
 export async function getOrderStatus(orderId) {
-  return cjRequest(`/shopping/order/getOrderDetail?orderId=${orderId}`);
+  return cjRequest(`/v1/shopping/order/getOrderDetail?orderId=${orderId}`);
 }
 
 export async function getShippingRate(pid, country = 'NO', quantity = 1) {
-  return cjRequest(`/logistic/freightCalculate?startCountryCode=DE&endCountryCode=${country}&quantity=${quantity}&pid=${pid}`);
+  return cjRequest(`/v1/logistic/freightCalculate?startCountryCode=DE&endCountryCode=${country}&quantity=${quantity}&pid=${pid}`);
 }
