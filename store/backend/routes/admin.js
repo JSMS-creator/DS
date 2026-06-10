@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { searchProducts, getProduct, getProductVariants, getCategories, createOrder as cjCreateOrder } from '../cj.js';
-import { sendOrderConfirmation } from '../email.js';
+import { sendOrderConfirmation, sendTrackingEmail } from '../email.js';
 
 const router = Router();
 
@@ -191,6 +191,22 @@ router.post('/settings', (req, res) => {
   });
   upsertMany(Object.entries(req.body));
   res.json({ ok: true });
+});
+
+// Send tracking email for an order
+router.post('/orders/:id/send-tracking', async (req, res, next) => {
+  try {
+    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Ordre ikke funnet' });
+    if (!order.tracking_number) return res.status(400).json({ error: 'Ingen sporingsnummer registrert' });
+    await sendTrackingEmail({
+      to: order.customer_email,
+      name: order.customer_name,
+      tracking: order.tracking_number,
+      trackingUrl: order.tracking_url || null
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 // Send test email

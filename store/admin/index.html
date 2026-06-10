@@ -108,8 +108,15 @@
 
     <!-- ORDERS -->
     <div class="page" id="page-orders">
-      <h2>Alle ordrer</h2>
-      <div id="orders-table"></div>
+      <h2>Ordrer</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="order-filter-tabs">
+        <button class="btn-primary btn-sm order-tab active" onclick="filterOrders('all',this)">Alle</button>
+        <button class="btn-secondary btn-sm order-tab" onclick="filterOrders('pending_fulfillment',this)">⚠️ Ikke oppfylt</button>
+        <button class="btn-secondary btn-sm order-tab" onclick="filterOrders('processing',this)">⏳ Behandles</button>
+        <button class="btn-secondary btn-sm order-tab" onclick="filterOrders('shipped',this)">🚚 Sendt</button>
+        <button class="btn-secondary btn-sm order-tab" onclick="filterOrders('cancelled',this)">❌ Kansellert</button>
+      </div>
+      <div id="orders-list"></div>
     </div>
 
     <!-- PRODUCTS -->
@@ -313,6 +320,7 @@
 
 <script>
 const API = 'https://thorough-charm-production-ecb9.up.railway.app/api';
+const API_BASE = 'https://thorough-charm-production-ecb9.up.railway.app';
 let adminSecret = '';
 let activeCategoryId = '';
 let activeCategoryName = '';
@@ -355,26 +363,152 @@ async function loadDashboard() {
   document.getElementById('recent-orders-table').innerHTML = renderOrderTable(orders.slice(0, 5));
 }
 
+let _allOrders = [];
+let _orderFilter = 'all';
+
 async function loadOrders() {
-  const orders = await api('/admin/orders');
-  document.getElementById('orders-table').innerHTML = renderOrderTable(orders);
+  _allOrders = await api('/admin/orders');
+  renderOrders();
 }
 
-function renderOrderTable(orders) {
-  if (!orders.length) return '<p style="color:#666">Ingen ordrer ennå.</p>';
-  return `<table>
-    <thead><tr><th>ID</th><th>Kunde</th><th>Produkt</th><th>Total</th><th>Status</th><th>Dato</th><th>Sporing</th></tr></thead>
-    <tbody>${orders.map(o => `
-      <tr>
-        <td>#${o.id}</td>
-        <td>${o.customer_name}<br><small style="color:#999">${o.customer_email}</small></td>
-        <td>${o.product_name} × ${o.quantity}</td>
-        <td>NOK ${Math.round(o.total_nok).toLocaleString('no-NO')}</td>
-        <td><span class="badge badge-${o.status}">${o.status}</span></td>
-        <td>${o.created_at?.slice(0,10)}</td>
-        <td>${o.tracking_number ? `<a href="${o.tracking_url || '#'}" target="_blank">${o.tracking_number}</a>` : '—'}</td>
-      </tr>`).join('')}
-    </tbody></table>`;
+function filterOrders(status, btn) {
+  _orderFilter = status;
+  document.querySelectorAll('.order-tab').forEach(b => { b.className = 'btn-secondary btn-sm order-tab'; });
+  btn.className = 'btn-primary btn-sm order-tab';
+  renderOrders();
+}
+
+function orderStatusLabel(s) {
+  return { pending: '🕐 Venter', pending_fulfillment: '⚠️ Ikke oppfylt', processing: '⏳ Behandles', shipped: '🚚 Sendt', delivered: '✅ Levert', cancelled: '❌ Kansellert' }[s] || s;
+}
+
+function orderStatusColor(s) {
+  return { pending: '#92400e', pending_fulfillment: '#dc2626', processing: '#1d4ed8', shipped: '#15803d', delivered: '#15803d', cancelled: '#6b7280' }[s] || '#333';
+}
+
+function renderOrders() {
+  const filtered = _orderFilter === 'all' ? _allOrders : _allOrders.filter(o => o.status === _orderFilter);
+  const el = document.getElementById('orders-list');
+  if (!filtered.length) { el.innerHTML = '<p style="color:#666">Ingen ordrer her.</p>'; return; }
+
+  el.innerHTML = filtered.map(o => {
+    let addr = {};
+    try { addr = JSON.parse(o.customer_address || '{}'); } catch {}
+    const cjLink = o.cj_order_id ? `<a href="https://app.cjdropshipping.com/order-manager/order-list" target="_blank">${o.cj_order_id}</a>` : '—';
+    return `
+    <div class="section-card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <span style="font-size:0.78rem;color:#888">Ordre #${o.id} · ${o.created_at?.slice(0,10)}</span><br>
+          <b style="font-size:1rem">${o.customer_name}</b>
+          <span style="margin-left:8px;font-size:0.82rem;color:#666">${o.customer_email}</span><br>
+          <span style="font-size:0.88rem;color:#444">${o.product_name} × ${o.quantity} · <b>NOK ${Math.round(o.total_nok).toLocaleString('no-NO')}</b></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="background:${orderStatusColor(o.status)}20;color:${orderStatusColor(o.status)};font-size:0.78rem;font-weight:700;padding:4px 10px;border-radius:100px;white-space:nowrap">${orderStatusLabel(o.status)}</span>
+          <button class="btn-secondary btn-sm" onclick="toggleOrderDetail(${o.id})">Detaljer ▾</button>
+        </div>
+      </div>
+
+      <div id="order-detail-${o.id}" style="display:none;margin-top:16px;border-top:1px solid #eee;padding-top:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:#888;margin-bottom:4px">LEVERINGSADRESSE</div>
+            <div style="font-size:0.88rem;line-height:1.6">${addr.line1 || '—'}<br>${addr.postal_code || ''} ${addr.city || ''}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:#888;margin-bottom:4px">CJ ORDRE ID</div>
+            <div style="font-size:0.88rem">${cjLink}</div>
+            <div style="font-size:0.75rem;font-weight:700;color:#888;margin-bottom:4px;margin-top:8px">SPORINGSNUMMER</div>
+            <div style="font-size:0.88rem">${o.tracking_number ? `<a href="${o.tracking_url || '#'}" target="_blank">${o.tracking_number}</a>` : '—'}</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${o.status === 'pending_fulfillment' ? `<button class="btn-primary btn-sm" onclick="fulfillOrder(${o.id})">🚀 Send til CJ</button>` : ''}
+          ${o.cj_order_id && !o.tracking_number ? `<button class="btn-secondary btn-sm" onclick="checkTracking(${o.id})">🔍 Sjekk sporing</button>` : ''}
+          ${o.tracking_number ? `<button class="btn-secondary btn-sm" onclick="sendTrackingMail(${o.id})">📧 Send sporingsmail</button>` : ''}
+          <button class="btn-secondary btn-sm" onclick="toggleStatusEdit(${o.id})">✏️ Endre status</button>
+        </div>
+
+        <!-- Tracking input -->
+        <div id="tracking-edit-${o.id}" style="display:none;margin-top:12px;display:none">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="tracking-num-${o.id}" placeholder="Sporingsnummer" value="${o.tracking_number || ''}" style="flex:1;min-width:160px;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.88rem">
+            <input id="tracking-url-${o.id}" placeholder="Sporings-URL (valgfritt)" value="${o.tracking_url || ''}" style="flex:2;min-width:200px;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.88rem">
+            <button class="btn-primary btn-sm" onclick="saveTracking(${o.id})">Lagre</button>
+          </div>
+        </div>
+
+        <!-- Status edit -->
+        <div id="status-edit-${o.id}" style="display:none;margin-top:12px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="status-sel-${o.id}" style="padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.88rem">
+              ${['pending','pending_fulfillment','processing','shipped','delivered','cancelled'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${orderStatusLabel(s)}</option>`).join('')}
+            </select>
+            <button class="btn-primary btn-sm" onclick="saveOrderStatus(${o.id})">Lagre status</button>
+          </div>
+        </div>
+
+        <div id="order-msg-${o.id}" style="margin-top:8px;font-size:0.85rem;color:green"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleOrderDetail(id) {
+  const el = document.getElementById('order-detail-' + id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleStatusEdit(id) {
+  const el = document.getElementById('status-edit-' + id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function fulfillOrder(id) {
+  const msg = document.getElementById('order-msg-' + id);
+  msg.style.color = '#666'; msg.textContent = 'Sender til CJ...';
+  const res = await api('/admin/orders/' + id + '/fulfill', { method: 'POST' });
+  if (res.ok) { msg.style.color = 'green'; msg.textContent = '✓ CJ-ordre opprettet: ' + res.cjOrderId; await loadOrders(); }
+  else { msg.style.color = 'red'; msg.textContent = 'Feil: ' + (res.error || JSON.stringify(res)); }
+}
+
+async function checkTracking(id) {
+  const msg = document.getElementById('order-msg-' + id);
+  msg.style.color = '#666'; msg.textContent = 'Sjekker sporing...';
+  const res = await fetch(API_BASE + '/api/orders/track/' + encodeURIComponent(
+    _allOrders.find(o => o.id === id)?.stripe_payment_intent || ''
+  ));
+  const data = await res.json();
+  if (data.tracking) { msg.style.color = 'green'; msg.textContent = '✓ Sporingsnummer: ' + data.tracking; await loadOrders(); }
+  else { msg.style.color = '#666'; msg.textContent = 'Ikke tilgjengelig ennå.'; }
+}
+
+async function sendTrackingMail(id) {
+  const msg = document.getElementById('order-msg-' + id);
+  msg.style.color = '#666'; msg.textContent = 'Sender e-post...';
+  const res = await api('/admin/orders/' + id + '/send-tracking', { method: 'POST' });
+  if (res.ok) { msg.style.color = 'green'; msg.textContent = '✓ Sporingsmail sendt!'; }
+  else { msg.style.color = 'red'; msg.textContent = 'Feil: ' + (res.error || JSON.stringify(res)); }
+}
+
+async function saveTracking(id) {
+  const num = document.getElementById('tracking-num-' + id).value.trim();
+  const url = document.getElementById('tracking-url-' + id).value.trim();
+  const msg = document.getElementById('order-msg-' + id);
+  await api('/admin/orders/' + id, { method: 'PATCH', body: JSON.stringify({ tracking_number: num, tracking_url: url }) });
+  msg.style.color = 'green'; msg.textContent = '✓ Sporing lagret!';
+  await loadOrders();
+}
+
+async function saveOrderStatus(id) {
+  const status = document.getElementById('status-sel-' + id).value;
+  const msg = document.getElementById('order-msg-' + id);
+  await api('/admin/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
+  msg.style.color = 'green'; msg.textContent = '✓ Status oppdatert!';
+  await loadOrders();
 }
 
 async function loadProducts() {
