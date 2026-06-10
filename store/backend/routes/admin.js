@@ -69,6 +69,13 @@ router.post('/products', (req, res) => {
   res.json({ ok: true });
 });
 
+// Set one product as the active store product (deactivates all others)
+router.patch('/products/:id/setActive', (req, res) => {
+  db.prepare('UPDATE products SET active = 0').run();
+  db.prepare('UPDATE products SET active = 1 WHERE cj_product_id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 // Toggle product active
 router.patch('/products/:id/toggle', (req, res) => {
   db.prepare('UPDATE products SET active = 1 - active WHERE cj_product_id = ?').run(req.params.id);
