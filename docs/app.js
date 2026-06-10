@@ -37,7 +37,95 @@ let priceBreakdown = null;
 
 // ── Bootstrap ────────────────────────────────────────────────
 async function init() {
-  await loadProduct();
+  await Promise.all([loadProduct(), loadSettings()]);
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch(`${API}/settings`);
+    if (!res.ok) return;
+    const s = await res.json();
+    applySettings(s);
+  } catch {
+    // Settings are optional — silently skip
+  }
+}
+
+function applySettings(s) {
+  if (!s) return;
+
+  // CSS vars
+  const root = document.documentElement;
+  if (s.primaryColor) root.style.setProperty('--black', s.primaryColor);
+  if (s.buttonColor) root.style.setProperty('--btn-color', s.buttonColor);
+
+  // Store name
+  const storeName = s.storeName || window.STORE_NAME || 'Store';
+  const navLogo = document.getElementById('nav-logo');
+  if (navLogo) navLogo.textContent = storeName;
+  const footerName = document.getElementById('footer-store-name');
+  if (footerName) footerName.textContent = '© 2025 ' + storeName;
+  const pageTitle = document.getElementById('page-title');
+  if (pageTitle && pageTitle.textContent) {
+    pageTitle.textContent = pageTitle.textContent.replace(/— .+$/, '— ' + storeName);
+  }
+
+  // Tagline
+  if (s.tagline) {
+    const taglineEl = document.getElementById('store-tagline');
+    if (taglineEl) taglineEl.textContent = s.tagline;
+  }
+
+  // Social proof numbers
+  if (s.soldCount) {
+    const el = document.getElementById('sold-count');
+    if (el) el.textContent = s.soldCount;
+  }
+  if (s.rating) {
+    const el = document.getElementById('rating-value');
+    if (el) el.textContent = s.rating;
+  }
+  if (s.deliveryDays) {
+    document.querySelectorAll('.delivery-days').forEach(el => { el.textContent = s.deliveryDays; });
+  }
+  if (s.returnDays) {
+    document.querySelectorAll('.return-days').forEach(el => { el.textContent = s.returnDays; });
+  }
+
+  // Benefits
+  if (Array.isArray(s.benefits)) {
+    const el = document.getElementById('benefits-list');
+    if (el) {
+      el.innerHTML = s.benefits.map(b => `<li>✅ ${b}</li>`).join('');
+    }
+  }
+
+  // Reviews
+  if (Array.isArray(s.reviews) && s.reviews.length) {
+    const el = document.getElementById('reviews-list');
+    if (el) {
+      el.innerHTML = s.reviews.map(r => `
+        <div class="review-card">
+          <div class="review-stars">${'★'.repeat(Math.max(1, Math.min(5, r.stars || 5)))}</div>
+          <p class="review-text">${r.text || ''}</p>
+          <span class="review-author">${r.name || ''}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  // FAQ
+  if (Array.isArray(s.faq) && s.faq.length) {
+    const el = document.getElementById('faq-list');
+    if (el) {
+      el.innerHTML = s.faq.map(item => `
+        <details class="faq-item">
+          <summary>${item.q || ''}</summary>
+          <p>${item.a || ''}</p>
+        </details>
+      `).join('');
+    }
+  }
 }
 
 async function loadProduct() {

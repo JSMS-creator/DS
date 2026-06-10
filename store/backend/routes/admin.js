@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { searchProducts, getProduct, getProductVariants, getCategories } from '../cj.js';
+import { searchProducts, getProduct, getProductVariants, getCategories, createOrder as cjCreateOrder } from '../cj.js';
 
 const router = Router();
 
@@ -129,6 +129,67 @@ Regler:
     if (!text) return res.status(500).json({ error: 'Gemini svarte ikke: ' + JSON.stringify(data).slice(0, 200) });
     res.json({ description: text });
   } catch (err) { next(err); }
+});
+
+// Manually trigger CJ order for a pending order
+router.post('/orders/:id/fulfill', async (req, res, next) => {
+  try {
+    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Not found' });
+
+    const address = JSON.parse(order.customer_address || '{}');
+    const cjRes = await cjCreateOrder({
+      orderNumber: order.stripe_payment_intent,
+      shippingZip: address.postal_code || '',
+      shippingCountryCode: 'NO',
+      shippingCountry: 'Norway',
+      shippingCity: address.city || '',
+      shippingAddress: address.line1 || '',
+      shippingCustomerName: order.customer_name,
+      shippingPhone: '00000000',
+      remark: '',
+      products: [{
+        vid: order.variant || '',
+        pid: order.product_id,
+        quantity: order.quantity,
+        shippingName: 'CJPacket_NL_NO'
+      }]
+    });
+
+    let cjOrderId = null;
+    if (cjRes.result) {
+      cjOrderId = cjRes.data?.orderId || null;
+      db.prepare("UPDATE orders SET cj_order_id = ?, status = 'processing', updated_at = datetime('now') WHERE id = ?")
+        .run(cjOrderId, order.id);
+    } else {
+      return res.status(500).json({ error: 'CJ order failed', detail: cjRes });
+    }
+
+    res.json({ ok: true, cjOrderId });
+  } catch (err) { next(err); }
+});
+
+// GET /admin/settings — returns all settings as flat object
+router.get('/settings', (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const settings = {};
+  for (const { key, value } of rows) {
+    // Try to parse JSON arrays/objects, fall back to plain string
+    try { settings[key] = JSON.parse(value); } catch { settings[key] = value; }
+  }
+  res.json(settings);
+});
+
+// POST /admin/settings — upsert key/value pairs
+router.post('/settings', (req, res) => {
+  const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+  const upsertMany = db.transaction(pairs => {
+    for (const [key, value] of pairs) {
+      upsert.run(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+  });
+  upsertMany(Object.entries(req.body));
+  res.json({ ok: true });
 });
 
 // Dashboard stats

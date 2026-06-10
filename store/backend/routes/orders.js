@@ -89,10 +89,10 @@ async function fulfillOrder(intent) {
       shippingPhone: intent.shipping?.phone || '00000000',
       remark: '',
       products: [{
-        vid: variantId || undefined,
+        vid: variantId || '',
         pid: productId,
         quantity: Number(quantity),
-        shippingName: 'CJPacket'
+        shippingName: 'CJPacket_NL_NO'
       }]
     });
     if (cjRes.result) cjOrderId = cjRes.data.orderId;
