@@ -5,15 +5,14 @@ let _token = null;
 let _tokenExpiry = 0;
 
 async function getToken() {
-  // If a direct API key is provided, use it without email/password auth
-  if (process.env.CJ_API_KEY) return process.env.CJ_API_KEY;
-
   if (_token && Date.now() < _tokenExpiry) return _token;
-  console.log('CJ: authenticating with', process.env.CJ_EMAIL);
-  const res = await fetch(`${BASE}/authentication/getAccessToken`, {
+  const apiKey = process.env.CJ_API_KEY;
+  if (!apiKey) throw new Error('CJ_API_KEY not set');
+  console.log('CJ: authenticating with apiKey...');
+  const res = await fetch(`${BASE}/v1/authentication/getAccessToken`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: process.env.CJ_EMAIL, password: process.env.CJ_PASSWORD })
+    body: JSON.stringify({ apiKey })
   });
   const text = await res.text();
   console.log('CJ auth response:', text.slice(0, 300));
@@ -21,7 +20,7 @@ async function getToken() {
   try { data = JSON.parse(text); } catch { throw new Error('CJ auth invalid JSON: ' + text.slice(0, 100)); }
   if (!data.result) throw new Error('CJ auth failed: ' + data.message);
   _token = data.data.accessToken;
-  _tokenExpiry = Date.now() + ((data.data.expiresIn || 3600) - 60) * 1000;
+  _tokenExpiry = Date.now() + ((data.data.expiresIn || 1296000) - 60) * 1000;
   return _token;
 }
 
