@@ -185,6 +185,111 @@
       </div>
       <div id="cj-results"></div>
     </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <h2>⚙️ Innstillinger</h2>
+
+      <!-- Butikk -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">🏪 Butikk</h3>
+        <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Butikknavn</label>
+        <input id="s-storeName" placeholder="Butikknavn" />
+        <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Slagord / tagline</label>
+        <input id="s-tagline" placeholder="Fri frakt · Rask levering · Trygt kjøp" />
+        <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Støtte-epost</label>
+        <input id="s-supportEmail" placeholder="support@butikk.no" type="email" />
+      </div>
+
+      <!-- Farger -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">🎨 Farger</h3>
+        <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:8px">Primærfarge</label>
+            <div style="display:flex;align-items:center;gap:12px">
+              <input id="s-primaryColor" type="color" value="#111111" style="width:56px;height:40px;padding:2px;margin:0;cursor:pointer" oninput="previewColors()" />
+              <input id="s-primaryColorHex" value="#111111" style="width:120px;margin:0" oninput="syncColorFromHex('primaryColor')" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:8px">Knappefargen</label>
+            <div style="display:flex;align-items:center;gap:12px">
+              <input id="s-buttonColor" type="color" value="#111111" style="width:56px;height:40px;padding:2px;margin:0;cursor:pointer" oninput="previewColors()" />
+              <input id="s-buttonColorHex" value="#111111" style="width:120px;margin:0" oninput="syncColorFromHex('buttonColor')" />
+            </div>
+          </div>
+        </div>
+        <div id="color-preview" style="margin-top:20px;padding:20px;border-radius:10px;background:#f8f8f8">
+          <p style="margin:0 0 12px;font-size:0.85rem;color:#666">Forhåndsvisning:</p>
+          <div id="preview-header" style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;font-weight:700;margin-bottom:8px">Butikknavn</div>
+          <br>
+          <button id="preview-btn" style="padding:12px 28px;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:0.9rem;cursor:default">Kjøp nå</button>
+        </div>
+      </div>
+
+      <!-- Sosial bevis -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">📊 Sosial bevis</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Antall solgte (visning)</label>
+            <input id="s-soldCount" placeholder="2 847" style="margin:0" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Rating (f.eks. 4.8)</label>
+            <input id="s-rating" placeholder="4.8" style="margin:0" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Leveringsdager (f.eks. 7-14)</label>
+            <input id="s-deliveryDays" placeholder="7-14" style="margin:0" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;font-weight:600;display:block;margin-bottom:4px">Returdager (f.eks. 30)</label>
+            <input id="s-returnDays" placeholder="30" style="margin:0" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Fordeler -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">✅ Fordeler (vises som punktliste i butikken)</h3>
+        <div id="s-benefits-list">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:1rem">✅</span>
+            <input class="s-benefit-input" placeholder="Fordel 1" style="margin:0;flex:1" />
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:1rem">✅</span>
+            <input class="s-benefit-input" placeholder="Fordel 2" style="margin:0;flex:1" />
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:1rem">✅</span>
+            <input class="s-benefit-input" placeholder="Fordel 3" style="margin:0;flex:1" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Anmeldelser -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">⭐ Anmeldelser (opptil 6)</h3>
+        <div id="s-reviews-list"></div>
+        <button class="btn-secondary btn-sm" onclick="addReviewRow()" style="margin-top:4px">+ Legg til anmeldelse</button>
+      </div>
+
+      <!-- FAQ -->
+      <div class="section-card">
+        <h3 style="margin-bottom:16px">❓ Ofte stilte spørsmål (FAQ, opptil 8)</h3>
+        <div id="s-faq-list"></div>
+        <button class="btn-secondary btn-sm" onclick="addFaqRow()" style="margin-top:4px">+ Legg til spørsmål</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <button class="btn-primary" onclick="saveSettings()" style="padding:12px 32px">💾 Lagre innstillinger</button>
+        <span id="s-save-msg" style="margin-left:16px;font-size:0.9rem;color:green"></span>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -227,6 +332,7 @@ function showPage(name, ev) {
   if (name === 'dashboard') loadDashboard();
   if (name === 'orders') loadOrders();
   if (name === 'products') loadProducts();
+  if (name === 'settings') loadSettingsPage();
 }
 
 async function loadDashboard() {
@@ -798,6 +904,136 @@ function syncVariantsJson() {
     };
   }).filter(v => v.variantNameEn);
   document.getElementById('p-variants-json').value = JSON.stringify(variants);
+}
+
+// ── SETTINGS PAGE ─────────────────────────────────────────────
+
+async function loadSettingsPage() {
+  const s = await api('/admin/settings').catch(() => ({}));
+  if (!s) return;
+
+  // Scalar fields
+  ['storeName', 'tagline', 'supportEmail', 'soldCount', 'rating', 'deliveryDays', 'returnDays'].forEach(key => {
+    const el = document.getElementById('s-' + key);
+    if (el && s[key] != null) el.value = s[key];
+  });
+
+  // Colors
+  if (s.primaryColor) {
+    document.getElementById('s-primaryColor').value = s.primaryColor;
+    document.getElementById('s-primaryColorHex').value = s.primaryColor;
+  }
+  if (s.buttonColor) {
+    document.getElementById('s-buttonColor').value = s.buttonColor;
+    document.getElementById('s-buttonColorHex').value = s.buttonColor;
+  }
+  previewColors();
+
+  // Benefits
+  const benefits = Array.isArray(s.benefits) ? s.benefits : [];
+  const benefitInputs = document.querySelectorAll('.s-benefit-input');
+  benefitInputs.forEach((inp, i) => { inp.value = benefits[i] || ''; });
+
+  // Reviews
+  const reviews = Array.isArray(s.reviews) ? s.reviews : [];
+  document.getElementById('s-reviews-list').innerHTML = '';
+  reviews.forEach(r => addReviewRow(r));
+  // Ensure at least one row
+  if (!reviews.length) addReviewRow();
+
+  // FAQ
+  const faq = Array.isArray(s.faq) ? s.faq : [];
+  document.getElementById('s-faq-list').innerHTML = '';
+  faq.forEach(f => addFaqRow(f));
+  if (!faq.length) addFaqRow();
+}
+
+function previewColors() {
+  const primary = document.getElementById('s-primaryColor').value || '#111111';
+  const button = document.getElementById('s-buttonColor').value || '#111111';
+  document.getElementById('preview-header').style.background = primary;
+  document.getElementById('preview-btn').style.background = button;
+  // Sync hex input
+  document.getElementById('s-primaryColorHex').value = primary;
+  document.getElementById('s-buttonColorHex').value = button;
+}
+
+function syncColorFromHex(field) {
+  const hexInput = document.getElementById('s-' + field + 'Hex');
+  const colorInput = document.getElementById('s-' + field);
+  const val = hexInput.value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    colorInput.value = val;
+    previewColors();
+  }
+}
+
+function addReviewRow(r = {}) {
+  const list = document.getElementById('s-reviews-list');
+  if (list.children.length >= 6) return;
+  const div = document.createElement('div');
+  div.className = 's-review-row';
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 80px auto;gap:8px;align-items:center;margin-bottom:8px';
+  div.innerHTML = `
+    <input class="s-review-text" placeholder="Anmeldelsestekst" value="${(r.text || '').replace(/"/g, '&quot;')}" style="margin:0" />
+    <input class="s-review-name" placeholder="Navn (f.eks. Kari N.)" value="${(r.name || '').replace(/"/g, '&quot;')}" style="margin:0" />
+    <select class="s-review-stars" style="margin:0;padding:10px 8px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:0.9rem">
+      ${[1,2,3,4,5].map(n => `<option value="${n}" ${(r.stars||5)==n?'selected':''}>${'★'.repeat(n)}</option>`).join('')}
+    </select>
+    <button class="btn-secondary btn-sm" style="color:#c00;padding:8px 10px" onclick="this.closest('.s-review-row').remove()">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function addFaqRow(f = {}) {
+  const list = document.getElementById('s-faq-list');
+  if (list.children.length >= 8) return;
+  const div = document.createElement('div');
+  div.className = 's-faq-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px';
+  div.innerHTML = `
+    <input class="s-faq-q" placeholder="Spørsmål" value="${(f.q || '').replace(/"/g, '&quot;')}" style="margin:0" />
+    <input class="s-faq-a" placeholder="Svar" value="${(f.a || '').replace(/"/g, '&quot;')}" style="margin:0" />
+    <button class="btn-secondary btn-sm" style="color:#c00;padding:8px 10px" onclick="this.closest('.s-faq-row').remove()">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+async function saveSettings() {
+  const storeName = document.getElementById('s-storeName').value.trim();
+  const tagline = document.getElementById('s-tagline').value.trim();
+  const supportEmail = document.getElementById('s-supportEmail').value.trim();
+  const primaryColor = document.getElementById('s-primaryColorHex').value.trim() || document.getElementById('s-primaryColor').value;
+  const buttonColor = document.getElementById('s-buttonColorHex').value.trim() || document.getElementById('s-buttonColor').value;
+  const soldCount = document.getElementById('s-soldCount').value.trim();
+  const rating = document.getElementById('s-rating').value.trim();
+  const deliveryDays = document.getElementById('s-deliveryDays').value.trim();
+  const returnDays = document.getElementById('s-returnDays').value.trim();
+
+  const benefits = [...document.querySelectorAll('.s-benefit-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+
+  const reviews = [...document.querySelectorAll('.s-review-row')].map(row => ({
+    text: row.querySelector('.s-review-text').value.trim(),
+    name: row.querySelector('.s-review-name').value.trim(),
+    stars: parseInt(row.querySelector('.s-review-stars').value) || 5
+  })).filter(r => r.text);
+
+  const faq = [...document.querySelectorAll('.s-faq-row')].map(row => ({
+    q: row.querySelector('.s-faq-q').value.trim(),
+    a: row.querySelector('.s-faq-a').value.trim()
+  })).filter(f => f.q);
+
+  const payload = {
+    storeName, tagline, supportEmail, primaryColor, buttonColor,
+    soldCount, rating, deliveryDays, returnDays,
+    benefits, reviews, faq
+  };
+
+  await api('/admin/settings', { method: 'POST', body: JSON.stringify(payload) });
+  const msg = document.getElementById('s-save-msg');
+  msg.textContent = '✓ Innstillinger lagret!';
+  setTimeout(() => msg.textContent = '', 3000);
 }
 </script>
 </body>
