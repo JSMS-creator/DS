@@ -183,6 +183,18 @@
     <!-- CJ SEARCH -->
     <div class="page" id="page-cj">
       <h2>Søk CJ Dropshipping</h2>
+
+      <!-- Import by URL -->
+      <div class="section-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:10px;font-size:0.95rem">📎 Importer direkte fra CJ-URL eller produkt-ID</h3>
+        <p style="font-size:0.82rem;color:#666;margin-bottom:10px">Finn produktet på <a href="https://cjdropshipping.com" target="_blank">cjdropshipping.com</a>, kopier URL-en eller produkt-ID-en og lim inn her.</p>
+        <div style="display:flex;gap:8px">
+          <input id="cj-url-input" placeholder="https://cjdropshipping.com/product/...  eller  2606100756421603800" style="flex:1;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.9rem" />
+          <button class="btn-primary" onclick="importFromUrl()">Hent produkt</button>
+        </div>
+        <div id="cj-url-msg" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+
       <div class="search-row">
         <input id="cj-search-input" placeholder="Søk på produktnavn..." onkeydown="if(event.key==='Enter')searchCJ()" />
         <button class="btn-primary" onclick="searchCJ()">Søk</button>
@@ -641,6 +653,31 @@ function filterCategory(el) {
 }
 
 // ── CJ SEARCH ────────────────────────────────────────────────
+
+async function importFromUrl() {
+  const input = document.getElementById('cj-url-input').value.trim();
+  const msg = document.getElementById('cj-url-msg');
+  if (!input) return;
+
+  // Extract product ID from URL or use as-is if looks like an ID
+  let pid = input;
+  const urlMatch = input.match(/[?&](?:pid|productId)=([^&]+)/) ||
+                   input.match(/\/product\/[^-]+-p-(\d+)\.html/) ||
+                   input.match(/\/(\d{15,})/);
+  if (urlMatch) pid = urlMatch[1];
+  pid = pid.trim();
+
+  msg.style.color = '#666'; msg.textContent = 'Henter produktdetaljer fra CJ...';
+  try {
+    const res = await api(`/admin/cj/product/${pid}`);
+    if (!res.product) { msg.style.color = 'red'; msg.textContent = 'Fant ikke produktet. Sjekk ID/URL.'; return; }
+    cjProductCache[pid] = { product: res.product, variants: res.variants };
+    msg.style.color = 'green'; msg.textContent = '✓ Produkt funnet: ' + (res.product.productNameEn || res.product.productName || pid);
+    importFromCache(pid);
+  } catch (e) {
+    msg.style.color = 'red'; msg.textContent = 'Feil: ' + e.message;
+  }
+}
 
 async function searchCJ() {
   const q = document.getElementById('cj-search-input').value.trim();
