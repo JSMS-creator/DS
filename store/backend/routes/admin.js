@@ -141,11 +141,14 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
     const address = JSON.parse(order.customer_address || '{}');
     const cjRes = await cjCreateOrder({
       orderNumber: order.stripe_payment_intent,
+      fromCountryCode: 'CN',
       shippingZip: address.postal_code || '',
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',
+      shippingProvince: '',
       shippingCity: address.city || '',
       shippingAddress: address.line1 || '',
+      shippingAddress2: '',
       shippingCustomerName: order.customer_name,
       shippingPhone: '00000000',
       remark: '',
@@ -157,6 +160,7 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
         fromCountryCode: 'CN'
       }]
     });
+    console.log('[fulfill] CJ response:', JSON.stringify(cjRes).slice(0, 500));
 
     let cjOrderId = null;
     if (cjRes.result) {

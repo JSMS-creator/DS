@@ -80,11 +80,14 @@ async function fulfillOrder(intent) {
   try {
     const cjRes = await cjCreateOrder({
       orderNumber: intent.id,
+      fromCountryCode: 'CN',
       shippingZip: addressParts.postal_code,
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',
+      shippingProvince: '',
       shippingCity: addressParts.city,
       shippingAddress: addressParts.line1,
+      shippingAddress2: '',
       shippingCustomerName: customer.name,
       shippingPhone: intent.shipping?.phone || '00000000',
       remark: '',
@@ -151,11 +154,14 @@ router.post('/demo-checkout', async (req, res, next) => {
     try {
       const cjRes = await cjCreateOrder({
         orderNumber: demoIntentId,
+        fromCountryCode: 'CN',
         shippingZip: postal || '',
         shippingCountryCode: 'NO',
         shippingCountry: 'Norway',
+        shippingProvince: '',
         shippingCity: city || '',
         shippingAddress: address || '',
+        shippingAddress2: '',
         shippingCustomerName: name,
         shippingPhone: '00000000',
         remark: 'DEMO ORDER',
