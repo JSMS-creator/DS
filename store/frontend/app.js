@@ -151,35 +151,113 @@ function renderProduct(p) {
   }
 }
 
-function shortVariantName(fullName, productName) {
-  if (!fullName) return fullName;
-  // Strip product name prefix (CJ includes it in variant names)
-  let s = fullName;
-  if (productName) {
-    const stripped = s.replace(new RegExp('^' + productName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').trim();
-    if (stripped) s = stripped;
-  }
-  // Normalise runs of spaces/CamelCase separators left behind
-  // e.g. "Light BlueGreenLightGray L" → "Light Blue / Green / Light Gray — L"
-  // Just clean up excess whitespace for now; the name is already shorter
-  return s.replace(/\s+/g, ' ').trim() || fullName;
+// Extract size token from end of variant name (e.g. "... Light Blue XL" → "XL")
+const SIZE_RE = /\b(\d{0,2}X{1,3}L|XS|[LMSX])\s*$/i;
+
+function stripProductName(name, productName) {
+  if (!name) return name;
+  const escaped = (productName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return name.replace(new RegExp('^' + escaped + '\\s*', 'i'), '').trim() || name;
+}
+
+function parseVariant(v) {
+  const raw = stripProductName(v.variantNameEn || v.name || '', currentProduct?.name);
+  const sizeMatch = raw.match(SIZE_RE);
+  const size = sizeMatch ? sizeMatch[1].toUpperCase() : null;
+  const color = size ? raw.slice(0, raw.lastIndexOf(sizeMatch[0])).trim() : raw;
+  return { raw, color: color || raw, size };
 }
 
 function renderVariants(variants) {
   const container = document.getElementById('variant-buttons');
   container.innerHTML = '';
+
+  const parsed = variants.map(v => ({ v, ...parseVariant(v) }));
+  const hasSizes = parsed.some(p => p.size);
+  const hasColors = new Set(parsed.map(p => p.color)).size > 1;
+
+  // If variants have both color and size dimensions — show two-level selector
+  if (hasSizes && hasColors) {
+    const colors = [...new Set(parsed.map(p => p.color))];
+    const sizes  = [...new Set(parsed.map(p => p.size).filter(Boolean))];
+
+    let selectedColor = colors[0];
+    let selectedSize  = sizes[0];
+
+    function pickVariant() {
+      const match = parsed.find(p => p.color === selectedColor && p.size === selectedSize)
+                 || parsed.find(p => p.color === selectedColor)
+                 || parsed[0];
+      selectedVariant = match.v;
+      if (match.v.variantSellPrice)
+        document.getElementById('price-display').textContent = 'NOK ' + formatPrice(totalPriceInclVat(match.v.variantSellPrice, currentProduct.shipping_price_nok));
+      if (match.v.variantImage) {
+        const mainImg = document.getElementById('hero-main-img');
+        mainImg.src = match.v.variantImage;
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        const th = [...document.querySelectorAll('.thumb')].find(t => t.src === match.v.variantImage);
+        if (th) th.classList.add('active');
+      }
+    }
+
+    function render() {
+      container.innerHTML = '';
+
+      // Color row
+      const colorLabel = document.createElement('div');
+      colorLabel.style.cssText = 'font-size:0.82rem;font-weight:600;color:#555;margin-bottom:6px';
+      colorLabel.textContent = 'Farge: ' + selectedColor;
+      container.appendChild(colorLabel);
+
+      const colorRow = document.createElement('div');
+      colorRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px';
+      colors.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'variant-btn' + (c === selectedColor ? ' selected' : '');
+        btn.textContent = c;
+        btn.style.cssText = 'font-size:0.8rem;padding:5px 12px';
+        btn.onclick = () => { selectedColor = c; render(); pickVariant(); };
+        colorRow.appendChild(btn);
+      });
+      container.appendChild(colorRow);
+
+      // Size row
+      const sizeLabel = document.createElement('div');
+      sizeLabel.style.cssText = 'font-size:0.82rem;font-weight:600;color:#555;margin-bottom:6px';
+      sizeLabel.textContent = 'Størrelse:';
+      container.appendChild(sizeLabel);
+
+      const sizeRow = document.createElement('div');
+      sizeRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+      sizes.forEach(s => {
+        const available = parsed.some(p => p.color === selectedColor && p.size === s);
+        const btn = document.createElement('button');
+        btn.className = 'variant-btn' + (s === selectedSize ? ' selected' : '');
+        btn.textContent = s;
+        btn.style.cssText = 'font-size:0.85rem;padding:5px 14px' + (!available ? ';opacity:0.35;cursor:default' : '');
+        btn.disabled = !available;
+        btn.onclick = () => { if (available) { selectedSize = s; render(); pickVariant(); } };
+        sizeRow.appendChild(btn);
+      });
+      container.appendChild(sizeRow);
+    }
+
+    render();
+    pickVariant();
+    return;
+  }
+
+  // Fallback: simple buttons (no size/color split)
   variants.forEach((v, i) => {
     const btn = document.createElement('button');
     btn.className = 'variant-btn' + (i === 0 ? ' selected' : '');
-    btn.textContent = shortVariantName(v.variantNameEn || v.name || v.id, currentProduct?.name);
+    btn.textContent = stripProductName(v.variantNameEn || v.name || v.id, currentProduct?.name);
     btn.onclick = () => {
       selectedVariant = v;
       document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
-      if (v.variantSellPrice) {
+      if (v.variantSellPrice)
         document.getElementById('price-display').textContent = 'NOK ' + formatPrice(totalPriceInclVat(v.variantSellPrice, currentProduct.shipping_price_nok));
-      }
-      // Switch main image if variant has one
       if (v.variantImage) {
         const mainImg = document.getElementById('hero-main-img');
         mainImg.src = v.variantImage;
