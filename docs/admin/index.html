@@ -368,7 +368,7 @@ async function openDetailModal(pid) {
     document.getElementById('detail-modal-content').innerHTML = `
       ${uniqueImages.length ? `<img class="img-main" id="main-img" src="${uniqueImages[0]}" onerror="modalImgFallback(this,${JSON.stringify(uniqueImages)},1)" />` : ''}
       ${uniqueImages.length > 1 ? `<div class="img-gallery">${uniqueImages.map((u, i) =>
-        `<img src="${u}" class="${i===0?'selected':''}" data-url="${u}" onclick="selectImg(this)" onerror="this.classList.remove('selected');this.style.display='none';if(i===0){var nxt=this.nextElementSibling;if(nxt){nxt.classList.add('selected');document.getElementById('main-img').src=nxt.dataset.url;}}" />`
+        `<img src="${u}" class="${i===0?'selected':''}" data-url="${u}" data-idx="${i}" onclick="selectImg(this)" onerror="this.style.display='none';if(this.dataset.idx==='0'){var nxt=this.nextElementSibling;if(nxt){nxt.classList.add('selected');document.getElementById('main-img').src=nxt.dataset.url;}}" />`
       ).join('')}</div>` : ''}
 
       <h3 style="margin-bottom:12px">${name}</h3>
