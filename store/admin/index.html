@@ -670,8 +670,12 @@ async function importFromUrl() {
   try {
     const res = await api(`/admin/cj/product/${pid}`);
     if (!res.product) { msg.style.color = 'red'; msg.textContent = 'Fant ikke produktet. Sjekk ID/URL.'; return; }
-    cjProductCache[pid] = { product: res.product, variants: res.variants };
-    msg.style.color = 'green'; msg.textContent = '✓ Produkt funnet: ' + (res.product.productNameEn || res.product.productName || pid);
+    // Store in cache the same format as importWithDetails uses
+    const product = res.product;
+    const variants = mapCjVariants(res.variants?.list || res.variants || []);
+    product._variants = variants;
+    cjProductCache[pid] = product;
+    msg.style.color = 'green'; msg.textContent = '✓ Produkt funnet: ' + (product.productNameEn || product.productName || pid);
     importFromCache(pid);
   } catch (e) {
     msg.style.color = 'red'; msg.textContent = 'Feil: ' + e.message;
