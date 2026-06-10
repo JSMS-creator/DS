@@ -68,5 +68,9 @@ export async function getOrderStatus(orderId) {
 }
 
 export async function getShippingRate(pid, country = 'NO', quantity = 1) {
-  return cjRequest(`/v1/logistic/freightCalculate?startCountryCode=DE&endCountryCode=${country}&quantity=${quantity}&pid=${pid}`);
+  return cjRequest(`/v1/logistic/freightCalculate?startCountryCode=CN&endCountryCode=${country}&quantity=${quantity}&pid=${pid}`);
+}
+
+export async function getAvailableLogistics(pid, country = 'NO') {
+  return cjRequest(`/v1/logistic/freightCalculate?startCountryCode=CN&endCountryCode=${country}&quantity=1&pid=${pid}`);
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
-import { searchProducts, getProduct, getProductVariants, getCategories, createOrder as cjCreateOrder } from '../cj.js';
+import { searchProducts, getProduct, getProductVariants, getCategories, createOrder as cjCreateOrder, getAvailableLogistics } from '../cj.js';
 import { sendOrderConfirmation, sendTrackingEmail } from '../email.js';
 
 const router = Router();
@@ -30,6 +30,14 @@ router.patch('/orders/:id', (req, res) => {
 router.get('/cj/categories', async (req, res, next) => {
   try {
     const result = await getCategories();
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// Get available logistics for a product (debug)
+router.get('/cj/logistics/:pid', async (req, res, next) => {
+  try {
+    const result = await getAvailableLogistics(req.params.pid);
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -151,9 +159,17 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
     if (!order) return res.status(404).json({ error: 'Not found' });
 
     const address = JSON.parse(order.customer_address || '{}');
+    const logisticName = await getAvailableLogistics(order.product_id, 'NO').then(res => {
+      const list = res?.data || [];
+      console.log('[fulfill] Available logistics:', list.map(l => l.logisticName).join(', '));
+      const preferred = ['CJPacket_Registered', 'CJPacket_NL_NO', 'CJPacket', 'PostNL'];
+      for (const name of preferred) { if (list.find(l => l.logisticName === name)) return name; }
+      return list[0]?.logisticName || 'CJPacket_Registered';
+    }).catch(() => 'CJPacket_Registered');
+
     const cjPayload = {
       orderNumber: order.stripe_payment_intent,
-      logisticName: 'CJPacket_Registered',
+      logisticName,
       fromCountryCode: 'CN',
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',

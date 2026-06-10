@@ -1,11 +1,28 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import { createOrder as cjCreateOrder, getOrderStatus } from '../cj.js';
+import { createOrder as cjCreateOrder, getOrderStatus, getAvailableLogistics } from '../cj.js';
 import db from '../db.js';
 import { sendOrderConfirmation, sendTrackingEmail } from '../email.js';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+async function getBestLogistic(pid) {
+  try {
+    const res = await getAvailableLogistics(pid, 'NO');
+    const list = res?.data || [];
+    console.log('[logistics] Available for', pid, ':', list.map(l => l.logisticName).join(', '));
+    // Prefer tracked options, fall back to first available
+    const preferred = ['CJPacket_Registered', 'CJPacket_NL_NO', 'CJPacket', 'PostNL'];
+    for (const name of preferred) {
+      if (list.find(l => l.logisticName === name)) return name;
+    }
+    return list[0]?.logisticName || 'CJPacket_Registered';
+  } catch (e) {
+    console.error('[logistics] Failed to fetch:', e.message);
+    return 'CJPacket_Registered';
+  }
+}
 
 // Create Stripe payment intent
 router.post('/create-payment-intent', async (req, res) => {
@@ -78,9 +95,10 @@ async function fulfillOrder(intent) {
   // Place order with CJ Dropshipping
   let cjOrderId = null;
   try {
+    const logisticName = await getBestLogistic(productId);
     const cjRes = await cjCreateOrder({
       orderNumber: intent.id,
-      logisticName: 'CJPacket_Registered',
+      logisticName,
       fromCountryCode: 'CN',
       shippingCountryCode: 'NO',
       shippingCountry: 'Norway',
@@ -150,9 +168,10 @@ router.post('/demo-checkout', async (req, res, next) => {
     let cjOrderId = null;
     let cjError = null;
     try {
+      const logisticName = await getBestLogistic(productId);
       const cjRes = await cjCreateOrder({
         orderNumber: demoIntentId,
-        logisticName: 'CJPacket_Registered',
+        logisticName,
         fromCountryCode: 'CN',
         shippingCountryCode: 'NO',
         shippingCountry: 'Norway',
