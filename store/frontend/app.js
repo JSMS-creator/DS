@@ -1,5 +1,32 @@
-const API = 'http://localhost:3001/api';
-const STRIPE_PK = 'pk_test_demo'; // Demo mode — replace with real Stripe key later
+const API = 'https://thorough-charm-production-ecb9.up.railway.app/api';
+const STRIPE_PK = 'pk_test_demo';
+
+// Demo product — replace with real API call when backend is deployed
+const DEMO_PRODUCT = {
+  cj_product_id: 'DEMO-DOG-COVER-001',
+  name: 'PawGuard Bilseteovertrukk for Hund',
+  description: `<ul>
+    <li>🐾 Vanntett Oxford-stoff — beskytter mot smuss, hår og vann</li>
+    <li>🔒 Hengekøye-design — holder hunden trygg og rolig under kjøring</li>
+    <li>🚗 Universell passform — passer alle biler, SUV-er og varebiler</li>
+    <li>🧺 Maskinvaskbar — enkelt å holde ren</li>
+    <li>⚡ Enkel montering — festestropper på hodestøtter, ingen verktøy</li>
+    <li>🌿 Slitesterk og langvarig — spar penger på bilseterens</li>
+  </ul>
+  <p>Perfekt for turer til hytta, skogstur eller daglig kjøring med hunden!</p>`,
+  variants: [
+    { vid: 'v1', variantNameEn: 'Svart — Standard', variantSellPrice: 319 },
+    { vid: 'v2', variantNameEn: 'Grå — Standard', variantSellPrice: 319 },
+    { vid: 'v3', variantNameEn: 'Svart — XL (SUV)', variantSellPrice: 359 }
+  ],
+  images: [
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80',
+    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80',
+    'https://images.unsplash.com/photo-1452378174528-3090a4bba7b2?w=800&q=80'
+  ],
+  sell_price_nok: 319,
+  shipping_price_nok: 0
+};
 
 let stripe, elements, paymentElement;
 let currentProduct = null;
@@ -10,7 +37,6 @@ let priceBreakdown = null;
 
 // ── Bootstrap ────────────────────────────────────────────────
 async function init() {
-  stripe = Stripe(STRIPE_PK);
   await loadProduct();
 }
 
@@ -21,7 +47,8 @@ async function loadProduct() {
     if (!products.length) return showError('Ingen produkter tilgjengelig.');
     renderProduct(products[0]);
   } catch {
-    showError('Kunne ikke laste produkt. Prøv igjen.');
+    // Fallback to demo product if backend is unreachable
+    renderProduct(DEMO_PRODUCT);
   }
 }
 
@@ -44,9 +71,13 @@ function renderProduct(p) {
   images.forEach((url, i) => {
     const img = document.createElement('img');
     img.src = url; img.className = 'thumb' + (i === 0 ? ' active' : '');
+    img.onerror = () => { img.style.display = 'none'; };
+    img.onload = () => { if (i === 0) mainImg.src = url; };
     img.onclick = () => { mainImg.src = url; document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active')); img.classList.add('active'); };
     thumbContainer.appendChild(img);
   });
+  // Main image fallback: if first fails, use first that loads
+  mainImg.onerror = () => { const first = thumbContainer.querySelector('img[style=""],.thumb'); if (first) mainImg.src = first.src; };
 
   // Description
   document.getElementById('product-description').innerHTML = p.description || '';
@@ -97,28 +128,21 @@ function formatPrice(n) { return Math.round(n).toLocaleString('no-NO'); }
 async function initCheckout() {
   if (!currentProduct) return;
   openModal();
-  renderModalSummary();
 
-  const res = await fetch(`${API}/orders/create-payment-intent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      productId: currentProduct.cj_product_id,
-      variantId: selectedVariant?.vid || null,
-      quantity,
-      customerInfo: {}
-    })
-  });
-  const data = await res.json();
-  if (data.error) { showPaymentMessage(data.error); return; }
-
-  clientSecret = data.clientSecret;
-  priceBreakdown = data.breakdown;
+  const p = currentProduct;
+  const sellPrice = selectedVariant?.variantSellPrice || p.sell_price_nok;
+  const subtotal = sellPrice * quantity;
+  const shipping = p.shipping_price_nok || 0;
+  const vat = Math.round((subtotal + shipping) * 0.25);
+  const total = subtotal + shipping + vat;
+  priceBreakdown = { subtotal, shipping, vat, total };
   renderModalSummary(priceBreakdown);
 
-  elements = stripe.elements({ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#2563eb', borderRadius: '8px' } } });
-  paymentElement = elements.create('payment');
-  paymentElement.mount('#payment-element');
+  // Demo mode — show mock payment form
+  document.getElementById('payment-element').innerHTML = `
+    <div style="border:1.5px solid #e8e8e8;border-radius:8px;padding:16px;background:#fafafa;color:#666;font-size:0.9rem;text-align:center">
+      🔒 Betalingsfelt (Stripe) — kobles til når du legger inn din Stripe-nøkkel
+    </div>`;
 }
 
 function renderModalSummary(breakdown) {
