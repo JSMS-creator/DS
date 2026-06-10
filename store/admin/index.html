@@ -118,17 +118,34 @@
         <h3>Legg til / oppdater produkt manuelt</h3>
         <input id="p-cj-id" placeholder="CJ Product ID *" />
         <input id="p-name" placeholder="Produktnavn *" />
-        <div style="position:relative">
-          <textarea id="p-desc" rows="4" placeholder="Beskrivelse (HTML ok)" style="padding-right:160px"></textarea>
-          <button class="btn-secondary btn-sm" id="ai-btn" onclick="generateDescription()" style="position:absolute;top:10px;right:10px;white-space:nowrap">✨ Norsk med AI</button>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:0.8rem;color:#666;font-weight:600">Beskrivelse</span>
+            <button class="btn-secondary btn-sm" id="ai-btn" onclick="generateDescription()">✨ Norsk med AI</button>
+            <button class="btn-secondary btn-sm" id="ai-undo-btn" onclick="undoAI()" style="display:none;color:#c00">↩ Angre AI</button>
+            <span style="font-size:0.75rem;color:#999">Tips: merk tekst i feltet → AI oversetter kun det markerte</span>
+          </div>
+          <textarea id="p-desc" rows="5" placeholder="Beskrivelse (HTML ok)" style="width:100%;margin:0"></textarea>
         </div>
         <input id="p-buy" placeholder="CJ Kjøpspris (USD)" type="number" step="0.01" />
         <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" />
         <input id="p-shipping" placeholder="Frakt NOK (0 = gratis)" type="number" step="1" />
         <input id="p-images" placeholder="Bilde-URLer, kommaseparert" />
         <div id="p-variants-box" style="display:none;margin-bottom:12px">
-          <div style="font-size:0.8rem;color:#666;margin-bottom:6px;font-weight:600">Varianter importert:</div>
-          <div id="p-variants-preview" style="font-size:0.8rem;color:#444"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:0.8rem;color:#666;font-weight:600">Varianter</span>
+            <button class="btn-secondary btn-sm" onclick="addVariantRow()">+ Legg til variant</button>
+          </div>
+          <table id="p-variants-table" style="width:100%;border-collapse:collapse;font-size:0.82rem">
+            <thead><tr style="background:#f8f8f8">
+              <th style="padding:6px 8px;text-align:left;border:1px solid #eee">Navn</th>
+              <th style="padding:6px 8px;text-align:left;border:1px solid #eee">USD</th>
+              <th style="padding:6px 8px;text-align:left;border:1px solid #eee">NOK</th>
+              <th style="padding:6px 8px;border:1px solid #eee">SKU</th>
+              <th style="padding:6px 8px;border:1px solid #eee"></th>
+            </tr></thead>
+            <tbody id="p-variants-tbody"></tbody>
+          </table>
           <input type="hidden" id="p-variants-json" value="[]" />
         </div>
         <button class="btn-primary" onclick="saveProduct()">Lagre produkt</button>
@@ -236,6 +253,7 @@ async function loadProducts() {
 }
 
 async function saveProduct() {
+  syncVariantsJson();
   let variants = [];
   try { variants = JSON.parse(document.getElementById('p-variants-json').value || '[]'); } catch {}
   const data = {
@@ -472,24 +490,13 @@ function importFromCache(pid) {
   // Pre-fill description HTML from CJ (keep img tags for store display)
   document.getElementById('p-desc').value = descHtml;
 
-  // Variants
-  const varBox = document.getElementById('p-variants-box');
-  const varPreview = document.getElementById('p-variants-preview');
-  const varJson = document.getElementById('p-variants-json');
-  if (variants.length) {
-    varJson.value = JSON.stringify(variants);
-    varPreview.innerHTML = variants.map(v =>
-      `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0">
-        ${v.variantNameEn || v.variantName || '—'}
-        <span style="color:#999;margin-left:8px">$${v.variantSellPrice || v.sellPrice || '?'}</span>
-        <span style="color:#2563eb;margin-left:8px">→ NOK ${Math.round((parseFloat(v.variantSellPrice || v.sellPrice || 0)) * 10.5 * 1.25)}</span>
-      </div>`
-    ).join('');
-    varBox.style.display = 'block';
-  } else {
-    varJson.value = '[]';
-    varBox.style.display = 'none';
-  }
+  // Variants — render editable rows
+  document.getElementById('p-variants-tbody').innerHTML = '';
+  document.getElementById('p-variants-box').style.display = variants.length ? 'block' : 'none';
+  variants.forEach(v => addVariantRow(v));
+  syncVariantsJson();
+  _descBeforeAI = null;
+  document.getElementById('ai-undo-btn').style.display = 'none';
 
   document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -514,21 +521,42 @@ async function importWithDetails(pid) {
   importFromCache(pid);
 }
 
+let _descBeforeAI = null;
+
 async function generateDescription() {
   const name = document.getElementById('p-name').value.trim();
-  const desc = document.getElementById('p-desc').value.trim();
+  const ta = document.getElementById('p-desc');
   const price = document.getElementById('p-sell').value;
   if (!name) { alert('Fyll inn produktnavn først.'); return; }
+
+  // If text is selected in textarea, only convert the selection
+  const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+  const hasSelection = sel.length > 5;
+  const textToConvert = hasSelection ? sel : ta.value;
+
+  // Strip HTML tags to send only plain text to AI, but keep img tags separately
+  const imgTags = [...textToConvert.matchAll(/<img[^>]*>/gi)].map(m => m[0]);
+  const plainText = textToConvert.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
   const btn = document.getElementById('ai-btn');
   btn.textContent = '⏳ Genererer...';
   btn.disabled = true;
+
   try {
     const result = await api('/admin/ai/describe', {
       method: 'POST',
-      body: JSON.stringify({ name, description: desc, price })
+      body: JSON.stringify({ name, description: plainText, price })
     });
     if (result.description) {
-      document.getElementById('p-desc').value = result.description;
+      _descBeforeAI = ta.value;
+      document.getElementById('ai-undo-btn').style.display = '';
+      // Re-attach original img tags after the AI text
+      const aiText = result.description + (imgTags.length ? '\n\n' + imgTags.join('\n') : '');
+      if (hasSelection) {
+        ta.value = ta.value.substring(0, ta.selectionStart) + aiText + ta.value.substring(ta.selectionEnd);
+      } else {
+        ta.value = aiText;
+      }
     } else {
       alert('Feil: ' + (result.error || 'Ukjent feil'));
     }
@@ -538,6 +566,60 @@ async function generateDescription() {
     btn.textContent = '✨ Norsk med AI';
     btn.disabled = false;
   }
+}
+
+function undoAI() {
+  if (_descBeforeAI !== null) {
+    document.getElementById('p-desc').value = _descBeforeAI;
+    _descBeforeAI = null;
+    document.getElementById('ai-undo-btn').style.display = 'none';
+  }
+}
+
+// ── VARIANT EDITOR ────────────────────────────────────────────
+
+function renderVariantRows(variants) {
+  const tbody = document.getElementById('p-variants-tbody');
+  tbody.innerHTML = '';
+  variants.forEach((v, i) => addVariantRow(v));
+  syncVariantsJson();
+}
+
+function addVariantRow(v = {}) {
+  const tbody = document.getElementById('p-variants-tbody');
+  const usd = parseFloat(v.variantSellPrice || v.sellPrice || 0);
+  const nok = v.variantSellPrice ? Math.round(usd * 10.5 * 1.25) : (v.nok || '');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="padding:4px;border:1px solid #eee"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantNameEn || v.variantName || ''}" placeholder="Navn" oninput="syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;width:70px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" type="number" step="0.01" value="${usd || ''}" placeholder="USD" oninput="autoNok(this);syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;width:70px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" type="number" step="1" value="${nok || ''}" placeholder="NOK" oninput="syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;width:110px"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantSku || ''}" placeholder="SKU" oninput="syncVariantsJson()" /></td>
+    <td style="padding:4px;border:1px solid #eee;text-align:center"><button class="btn-secondary btn-sm" style="padding:4px 8px;color:#c00" onclick="this.closest('tr').remove();syncVariantsJson()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  document.getElementById('p-variants-box').style.display = 'block';
+}
+
+function autoNok(usdInput) {
+  const tr = usdInput.closest('tr');
+  const nokInput = tr.querySelectorAll('input')[2];
+  const usd = parseFloat(usdInput.value) || 0;
+  if (usd) nokInput.value = Math.round(usd * 10.5 * 1.25);
+}
+
+function syncVariantsJson() {
+  const rows = document.querySelectorAll('#p-variants-tbody tr');
+  const variants = [...rows].map(tr => {
+    const inputs = tr.querySelectorAll('input');
+    return {
+      variantNameEn: inputs[0].value.trim(),
+      variantSellPrice: parseFloat(inputs[1].value) || 0,
+      nok: parseFloat(inputs[2].value) || 0,
+      variantSku: inputs[3].value.trim()
+    };
+  }).filter(v => v.variantNameEn);
+  document.getElementById('p-variants-json').value = JSON.stringify(variants);
 }
 </script>
 </body>
