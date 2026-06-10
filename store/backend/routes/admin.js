@@ -75,6 +75,15 @@ router.patch('/products/:id/toggle', (req, res) => {
   res.json({ ok: true });
 });
 
+// List available Gemini models (debug)
+router.get('/ai/models', async (req, res, next) => {
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+    const data = await r.json();
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
 // AI: translate/rewrite product description to Norwegian using Gemini
 router.post('/ai/describe', async (req, res, next) => {
   try {
