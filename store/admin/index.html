@@ -363,9 +363,9 @@ async function openDetailModal(pid) {
     cjProductCache[pid] = { ...p, _allImages: uniqueImages, _variants: variants };
 
     document.getElementById('detail-modal-content').innerHTML = `
-      ${uniqueImages.length ? `<img class="img-main" id="main-img" src="${uniqueImages[0]}" />` : ''}
+      ${uniqueImages.length ? `<img class="img-main" id="main-img" src="${uniqueImages[0]}" onerror="modalImgFallback(this,${JSON.stringify(uniqueImages)},1)" />` : ''}
       ${uniqueImages.length > 1 ? `<div class="img-gallery">${uniqueImages.map((u, i) =>
-        `<img src="${u}" class="${i===0?'selected':''}" data-url="${u}" onclick="selectImg(this)" onerror="this.style.display='none'" />`
+        `<img src="${u}" class="${i===0?'selected':''}" data-url="${u}" onclick="selectImg(this)" onerror="this.classList.remove('selected');this.style.display='none';if(i===0){var nxt=this.nextElementSibling;if(nxt){nxt.classList.add('selected');document.getElementById('main-img').src=nxt.dataset.url;}}" />`
       ).join('')}</div>` : ''}
 
       <h3 style="margin-bottom:12px">${name}</h3>
@@ -402,6 +402,11 @@ async function openDetailModal(pid) {
   } catch (err) {
     document.getElementById('detail-modal-content').innerHTML = `<p style="color:red">Kunne ikke laste produktdetaljer: ${err.message}</p>`;
   }
+}
+
+function modalImgFallback(el, imgs, idx) {
+  if (idx < imgs.length) { el.src = imgs[idx]; el.onerror = () => modalImgFallback(el, imgs, idx + 1); }
+  else el.style.display = 'none';
 }
 
 function selectImg(el) {
