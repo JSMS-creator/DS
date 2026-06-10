@@ -69,6 +69,16 @@ router.post('/products', (req, res) => {
   res.json({ ok: true });
 });
 
+// List ALL products (active and inactive) for admin
+router.get('/products', (req, res) => {
+  const products = db.prepare('SELECT * FROM products ORDER BY active DESC, updated_at DESC').all();
+  res.json(products.map(p => ({
+    ...p,
+    variants: JSON.parse(p.variants || '[]'),
+    images: JSON.parse(p.images || '[]')
+  })));
+});
+
 // Set one product as the active store product (deactivates all others)
 router.patch('/products/:id/setActive', (req, res) => {
   db.prepare('UPDATE products SET active = 0').run();
