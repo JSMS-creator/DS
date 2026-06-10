@@ -156,7 +156,7 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
         vid: order.variant || '',
         pid: order.product_id,
         quantity: order.quantity,
-        shippingName: 'CJPacket_Registered',
+        logisticName: 'CJPacket_Registered',
         fromCountryCode: 'CN'
       }]
     });

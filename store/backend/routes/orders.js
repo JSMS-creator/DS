@@ -95,7 +95,7 @@ async function fulfillOrder(intent) {
         vid: variantId || '',
         pid: productId,
         quantity: Number(quantity),
-        shippingName: 'CJPacket_Registered',
+        logisticName: 'CJPacket_Registered',
         fromCountryCode: 'CN'
       }]
     });
@@ -169,7 +169,7 @@ router.post('/demo-checkout', async (req, res, next) => {
           vid: variantId || '',
           pid: productId,
           quantity: Number(quantity),
-          shippingName: 'CJPacket_Registered',
+          logisticName: 'CJPacket_Registered',
         fromCountryCode: 'CN'
         }]
       });
