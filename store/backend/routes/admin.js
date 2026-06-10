@@ -155,7 +155,13 @@ router.post('/orders/:id/fulfill', async (req, res, next) => {
       email: order.customer_email || '',
       remark: '',
       products: [{
-        vid: order.variant || '',
+        vid: (() => {
+          // order.variant may be a SKU — try to find UUID from product variants
+          const product = db.prepare('SELECT variants FROM products WHERE cj_product_id = ?').get(order.product_id);
+          const variants = JSON.parse(product?.variants || '[]');
+          const match = variants.find(v => v.variantId === order.variant || v.variantSku === order.variant);
+          return match?.variantId || order.variant || '';
+        })(),
         quantity: order.quantity
       }]
     };

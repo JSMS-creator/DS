@@ -135,7 +135,8 @@ router.post('/demo-checkout', async (req, res, next) => {
     if (!product) return res.status(404).json({ error: 'Produkt ikke funnet' });
 
     const variants = JSON.parse(product.variants || '[]');
-    const variant = variants.find(v => v.variantSku === variantId || v.variantNameEn === variantId) || variants[0];
+    const variant = variants.find(v => v.variantId === variantId || v.variantSku === variantId || v.variantNameEn === variantId) || variants[0];
+    const cjVid = variant?.variantId || variant?.variantSku || variantId || '';
     const unitPrice = variant?.variantSellPrice || product.sell_price_nok;
     const subtotal = unitPrice * Number(quantity);
     const shipping = product.shipping_price_nok || 0;
@@ -164,7 +165,7 @@ router.post('/demo-checkout', async (req, res, next) => {
         shippingPhone: '00000000',
         email: email || '',
         remark: 'DEMO ORDER',
-        products: [{ vid: variantId || '', quantity: Number(quantity) }]
+        products: [{ vid: cjVid, quantity: Number(quantity) }]
       });
       if (cjRes.result) cjOrderId = cjRes.data?.orderId || null;
       else cjError = cjRes.message || JSON.stringify(cjRes);

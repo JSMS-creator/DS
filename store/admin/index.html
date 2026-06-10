@@ -995,6 +995,7 @@ function mapCjVariants(cjVariants) {
     variantBuyPriceUsd: parseFloat(v.variantSellPrice || v.sellPrice || 0),
     variantImage: v.variantImage || v.productImage || '',
     variantSku: v.variantSku || '',
+    variantId: v.vid || v.variantId || '',  // CJ UUID — required for ordering
   }));
 }
 

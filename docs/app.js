@@ -352,7 +352,7 @@ async function submitPayment() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         productId: currentProduct.cj_product_id,
-        variantId: selectedVariant?.variantSku || selectedVariant?.variantNameEn || '',
+        variantId: selectedVariant?.variantId || selectedVariant?.variantSku || '',
         quantity,
         name, email, address, postal, city
       })
