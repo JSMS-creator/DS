@@ -127,14 +127,29 @@
           </div>
           <textarea id="p-desc" rows="5" placeholder="Beskrivelse (HTML ok)" style="width:100%;margin:0"></textarea>
         </div>
-        <input id="p-buy" placeholder="CJ Kjøpspris (USD)" type="number" step="0.01" />
-        <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" />
+        <input id="p-buy" placeholder="CJ Kjøpspris (USD)" type="number" step="0.01" oninput="applyMarkup()" />
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+          <div style="flex:1">
+            <input id="p-sell" placeholder="Salgspris NOK (ekskl. MVA) *" type="number" step="1" style="margin:0" oninput="updateMarkupDisplay()" />
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <input id="p-markup" placeholder="%" type="number" step="1" min="100" value="300" style="margin:0;width:80px;text-align:center" oninput="applyMarkup()" />
+            <span style="font-size:0.8rem;color:#666;white-space:nowrap">% påslag</span>
+            <button class="btn-secondary btn-sm" onclick="applyMarkupToAll()">Bulk alle</button>
+          </div>
+        </div>
         <input id="p-shipping" placeholder="Frakt NOK (0 = gratis)" type="number" step="1" />
         <input id="p-images" placeholder="Bilde-URLer, kommaseparert" />
         <div id="p-variants-box" style="display:none;margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
             <span style="font-size:0.8rem;color:#666;font-weight:600">Varianter</span>
-            <button class="btn-secondary btn-sm" onclick="addVariantRow()">+ Legg til variant</button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:0.8rem;color:#666">Bulk påslag:</span>
+              <input id="v-markup" type="number" step="1" min="100" value="300" placeholder="%" style="margin:0;width:70px;padding:5px 8px;font-size:0.8rem" />
+              <span style="font-size:0.8rem;color:#666">%</span>
+              <button class="btn-secondary btn-sm" onclick="bulkVariantMarkup()">Oppdater alle</button>
+              <button class="btn-secondary btn-sm" onclick="addVariantRow()">+ Ny</button>
+            </div>
           </div>
           <table id="p-variants-table" style="width:100%;border-collapse:collapse;font-size:0.82rem">
             <thead><tr style="background:#f8f8f8">
@@ -485,7 +500,8 @@ function importFromCache(pid) {
   document.getElementById('p-cj-id').value = pid;
   document.getElementById('p-name').value = name;
   document.getElementById('p-buy').value = price;
-  document.getElementById('p-sell').value = Math.round(price * 10.5 * 1.25);
+  const pct = parseFloat(document.getElementById('p-markup').value) || 300;
+  document.getElementById('p-sell').value = price ? calcNok(price, pct) : '';
   document.getElementById('p-images').value = allImages.join(', ');
   // Pre-fill description HTML from CJ (keep img tags for store display)
   document.getElementById('p-desc').value = descHtml;
@@ -522,6 +538,47 @@ async function importWithDetails(pid) {
 }
 
 let _descBeforeAI = null;
+const USD_TO_NOK = 10.5;
+const VAT = 1.25;
+
+function calcNok(usd, markupPct) {
+  return Math.round(usd * USD_TO_NOK * (markupPct / 100) * VAT);
+}
+
+function applyMarkup() {
+  const usd = parseFloat(document.getElementById('p-buy').value) || 0;
+  const pct = parseFloat(document.getElementById('p-markup').value) || 300;
+  if (usd) document.getElementById('p-sell').value = calcNok(usd, pct);
+}
+
+function updateMarkupDisplay() {
+  const usd = parseFloat(document.getElementById('p-buy').value) || 0;
+  const nok = parseFloat(document.getElementById('p-sell').value) || 0;
+  if (usd && nok) {
+    const pct = Math.round(nok / (usd * USD_TO_NOK * VAT) * 100);
+    document.getElementById('p-markup').value = pct;
+  }
+}
+
+function applyMarkupToAll() {
+  const pct = parseFloat(document.getElementById('p-markup').value) || 300;
+  applyMarkup();
+  bulkVariantMarkupWithPct(pct);
+}
+
+function bulkVariantMarkup() {
+  const pct = parseFloat(document.getElementById('v-markup').value) || 300;
+  bulkVariantMarkupWithPct(pct);
+}
+
+function bulkVariantMarkupWithPct(pct) {
+  document.querySelectorAll('#p-variants-tbody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    const usd = parseFloat(inputs[1].value) || 0;
+    if (usd) inputs[2].value = calcNok(usd, pct);
+  });
+  syncVariantsJson();
+}
 
 async function generateDescription() {
   const name = document.getElementById('p-name').value.trim();
@@ -588,7 +645,8 @@ function renderVariantRows(variants) {
 function addVariantRow(v = {}) {
   const tbody = document.getElementById('p-variants-tbody');
   const usd = parseFloat(v.variantSellPrice || v.sellPrice || 0);
-  const nok = v.variantSellPrice ? Math.round(usd * 10.5 * 1.25) : (v.nok || '');
+  const pct = parseFloat(document.getElementById('p-markup')?.value) || 300;
+  const nok = usd ? calcNok(usd, pct) : (v.nok || '');
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="padding:4px;border:1px solid #eee"><input style="margin:0;padding:6px 8px;font-size:0.82rem" value="${v.variantNameEn || v.variantName || ''}" placeholder="Navn" oninput="syncVariantsJson()" /></td>
@@ -605,7 +663,8 @@ function autoNok(usdInput) {
   const tr = usdInput.closest('tr');
   const nokInput = tr.querySelectorAll('input')[2];
   const usd = parseFloat(usdInput.value) || 0;
-  if (usd) nokInput.value = Math.round(usd * 10.5 * 1.25);
+  const pct = parseFloat(document.getElementById('v-markup').value) || 300;
+  if (usd) nokInput.value = calcNok(usd, pct);
 }
 
 function syncVariantsJson() {
