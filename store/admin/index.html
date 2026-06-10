@@ -353,7 +353,9 @@ async function openDetailModal(pid) {
     const variants = data.variants || [];
     const images = [p.productImage, ...(p.productImageSet || [])].filter(Boolean);
     const uniqueImages = [...new Set(images)];
-    const price = p.sellPrice || p.salePrice || '?';
+    const rawPrice = p.sellPrice || p.salePrice || '0';
+    const price = parseFloat(String(rawPrice).split('-')[0]) || 0;
+    const priceDisplay = p.sellPrice || p.salePrice || '?';
     const name = p.productNameEn || p.productName || 'Ukjent produkt';
     // Cache full product data so import button can safely read it
     cjProductCache[pid] = { ...p, _allImages: uniqueImages, _variants: variants };
@@ -366,8 +368,8 @@ async function openDetailModal(pid) {
 
       <h3 style="margin-bottom:12px">${name}</h3>
       <div class="detail-meta">
-        <div><div class="meta-label">CJ Pris (USD)</div><div class="meta-val">$${price}</div></div>
-        <div><div class="meta-label">Foreslått NOK</div><div class="meta-val">NOK ${Math.round((parseFloat(price)||0) * 10.5 * 1.25)}</div></div>
+        <div><div class="meta-label">CJ Pris (USD)</div><div class="meta-val">$${priceDisplay}</div></div>
+        <div><div class="meta-label">Foreslått NOK</div><div class="meta-val">NOK ${Math.round(price * 10.5 * 1.25)}</div></div>
         ${p.deliveryTime ? `<div><div class="meta-label">Leveringstid</div><div class="meta-val">${p.deliveryTime} dager</div></div>` : ''}
         ${p.weight ? `<div><div class="meta-label">Vekt</div><div class="meta-val">${p.weight}g</div></div>` : ''}
       </div>
@@ -419,16 +421,25 @@ function closeModal(e) {
 function importFromCache(pid) {
   const p = cjProductCache[pid] || {};
   const name = p.productNameEn || p.productName || '';
-  const price = p.sellPrice || p.salePrice || '';
-  const images = p._allImages || [p.productImage, ...(p.productImageSet || [])].filter(Boolean);
+  // CJ may return a price range like "5.47-8.13" — take the lower bound
+  const rawPrice = p.sellPrice || p.salePrice || '0';
+  const price = parseFloat(String(rawPrice).split('-')[0]) || 0;
+  // Images may be an array or a JSON string; flatten and deduplicate
+  let images = p._allImages;
+  if (!images) {
+    const imgSet = p.productImageSet || [];
+    const parsed = typeof imgSet === 'string' ? JSON.parse(imgSet) : imgSet;
+    images = [p.productImage, ...parsed].filter(Boolean);
+  }
+  const uniqueImages = [...new Set(images)];
   showPage('products', null);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelector('[onclick*="products"]').classList.add('active');
   document.getElementById('p-cj-id').value = pid;
   document.getElementById('p-name').value = name;
   document.getElementById('p-buy').value = price;
-  document.getElementById('p-sell').value = Math.round((parseFloat(price) || 0) * 10.5 * 1.25);
-  document.getElementById('p-images').value = images.join(', ');
+  document.getElementById('p-sell').value = Math.round(price * 10.5 * 1.25);
+  document.getElementById('p-images').value = uniqueImages.join(', ');
   document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 </script>
