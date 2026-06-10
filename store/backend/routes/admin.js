@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { searchProducts, getProduct, getProductVariants, getCategories, createOrder as cjCreateOrder } from '../cj.js';
+import { sendOrderConfirmation } from '../email.js';
 
 const router = Router();
 
@@ -190,6 +191,22 @@ router.post('/settings', (req, res) => {
   });
   upsertMany(Object.entries(req.body));
   res.json({ ok: true });
+});
+
+// Send test email
+router.post('/test-email', async (req, res, next) => {
+  try {
+    const { to } = req.body;
+    if (!to) return res.status(400).json({ error: 'Missing "to" email' });
+    await sendOrderConfirmation({
+      to,
+      name: 'Test Kunde',
+      product: 'Testprodukt',
+      quantity: 1,
+      total: 299
+    });
+    res.json({ ok: true, sent_to: to });
+  } catch (err) { next(err); }
 });
 
 // Dashboard stats

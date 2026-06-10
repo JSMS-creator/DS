@@ -288,6 +288,16 @@
         <button class="btn-primary" onclick="saveSettings()" style="padding:12px 32px">💾 Lagre innstillinger</button>
         <span id="s-save-msg" style="margin-left:16px;font-size:0.9rem;color:green"></span>
       </div>
+
+      <!-- E-post test -->
+      <div class="section-card" style="margin-top:24px">
+        <h3 style="margin-bottom:16px">📧 Test e-post (Resend)</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="test-email-to" type="email" placeholder="Din e-postadresse" style="flex:1;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.95rem">
+          <button class="btn-primary" onclick="sendTestEmail()">Send test</button>
+        </div>
+        <span id="test-email-msg" style="display:block;margin-top:8px;font-size:0.88rem"></span>
+      </div>
     </div>
 
   </div>
@@ -997,6 +1007,18 @@ function addFaqRow(f = {}) {
     <button class="btn-secondary btn-sm" style="color:#c00;padding:8px 10px" onclick="this.closest('.s-faq-row').remove()">✕</button>
   `;
   list.appendChild(div);
+}
+
+async function sendTestEmail() {
+  const to = document.getElementById('test-email-to').value.trim();
+  const msg = document.getElementById('test-email-msg');
+  if (!to) { msg.style.color = 'red'; msg.textContent = 'Skriv inn e-postadresse.'; return; }
+  msg.style.color = '#666'; msg.textContent = 'Sender...';
+  try {
+    const res = await api('/admin/test-email', { method: 'POST', body: JSON.stringify({ to }) });
+    if (res.ok) { msg.style.color = 'green'; msg.textContent = '✓ Test-e-post sendt til ' + to; }
+    else { msg.style.color = 'red'; msg.textContent = 'Feil: ' + JSON.stringify(res); }
+  } catch (e) { msg.style.color = 'red'; msg.textContent = 'Feil: ' + e.message; }
 }
 
 async function saveSettings() {
