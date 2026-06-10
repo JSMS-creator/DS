@@ -157,6 +157,8 @@ const API = 'https://thorough-charm-production-ecb9.up.railway.app/api';
 let adminSecret = '';
 let activeCategoryId = '';
 let activeCategoryName = '';
+// Store product data by pid to avoid unsafe inline onclick strings
+const cjProductCache = {};
 
 async function api(path, options = {}) {
   const res = await fetch(API + path, { ...options, headers: { 'x-admin-secret': adminSecret, 'Content-Type': 'application/json', ...options.headers } });
@@ -258,7 +260,10 @@ const POPULAR_CATEGORY_NAMES = [
 async function loadCategories() {
   try {
     const result = await api('/admin/cj/categories');
-    const list = result?.data || [];
+    // CJ returns { data: [...] } where each item may have categoryFirstName/categoryFirstId
+    // or the list may itself be the categories array
+    let list = result?.data || result?.list || result || [];
+    if (!Array.isArray(list)) list = [];
     renderCategoryChips(list);
   } catch {
     document.getElementById('category-chips').innerHTML = '';
@@ -267,16 +272,22 @@ async function loadCategories() {
 
 function renderCategoryChips(categories) {
   const container = document.getElementById('category-chips');
-  // Try to pick popular ones first, then fill up to 12 total
-  const sorted = [...categories].sort((a, b) => {
-    const aPop = POPULAR_CATEGORY_NAMES.some(n => (a.categoryName || '').toLowerCase().includes(n.toLowerCase()));
-    const bPop = POPULAR_CATEGORY_NAMES.some(n => (b.categoryName || '').toLowerCase().includes(n.toLowerCase()));
+  if (!Array.isArray(categories) || !categories.length) {
+    container.innerHTML = '';
+    return;
+  }
+  // CJ API may use categoryFirstName or categoryName depending on endpoint
+  const getName = c => c.categoryFirstName || c.categoryName || c.name || '';
+  const getId = c => c.categoryFirstId || c.categoryId || c.id || '';
+  const sorted = [...categories].filter(c => getName(c)).sort((a, b) => {
+    const aPop = POPULAR_CATEGORY_NAMES.some(n => getName(a).toLowerCase().includes(n.toLowerCase()));
+    const bPop = POPULAR_CATEGORY_NAMES.some(n => getName(b).toLowerCase().includes(n.toLowerCase()));
     return bPop - aPop;
   });
   const shown = sorted.slice(0, 12);
   container.innerHTML = shown.map(c => `
-    <span class="chip" data-id="${c.categoryId}" data-name="${c.categoryName}" onclick="filterCategory(this)">
-      ${c.categoryName}
+    <span class="chip" data-id="${getId(c)}" data-name="${getName(c)}" onclick="filterCategory(this)">
+      ${getName(c)}
     </span>
   `).join('');
 }
@@ -309,12 +320,13 @@ async function searchCJ() {
   if (activeCategoryId) url += `${q ? '&' : ''}categoryId=${encodeURIComponent(activeCategoryId)}`;
   const data = await api(url);
   const products = data?.data?.list || data?.data || data?.list || [];
+  // Cache all products by pid for safe access from onclick
+  products.forEach(p => { if (p.pid) cjProductCache[p.pid] = p; });
   document.getElementById('cj-results').innerHTML = products.length
     ? products.map(p => {
         const img = p.productImage || (p.productImageSet && p.productImageSet[0]) || '';
         const price = p.sellPrice || p.salePrice || '?';
         const name = p.productNameEn || p.productName || 'Ukjent produkt';
-        const safeName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         return `<div class="cj-product">
           ${img ? `<img src="${img}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display='none'" />` : '<div style="width:72px;height:72px;background:#f0f0f0;border-radius:8px;flex-shrink:0"></div>'}
           <div class="cj-product-info">
@@ -323,7 +335,7 @@ async function searchCJ() {
           </div>
           <div class="cj-product-actions">
             <button class="btn-secondary btn-sm" onclick="openDetailModal('${p.pid}')">Detaljer</button>
-            <button class="btn-primary btn-sm" onclick="prefillProduct('${p.pid}','${safeName}','${price}','')">Importer</button>
+            <button class="btn-primary btn-sm" onclick="importFromCache('${p.pid}')">Importer</button>
           </div>
         </div>`;
       }).join('')
@@ -343,19 +355,19 @@ async function openDetailModal(pid) {
     const uniqueImages = [...new Set(images)];
     const price = p.sellPrice || p.salePrice || '?';
     const name = p.productNameEn || p.productName || 'Ukjent produkt';
-    const safeName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    const safeImages = uniqueImages.join(',').replace(/'/g, "\\'");
+    // Cache full product data so import button can safely read it
+    cjProductCache[pid] = { ...p, _allImages: uniqueImages, _variants: variants };
 
     document.getElementById('detail-modal-content').innerHTML = `
       ${uniqueImages.length ? `<img class="img-main" id="main-img" src="${uniqueImages[0]}" />` : ''}
       ${uniqueImages.length > 1 ? `<div class="img-gallery">${uniqueImages.map((u, i) =>
-        `<img src="${u}" class="${i===0?'selected':''}" onclick="selectImg(this,'${u}')" onerror="this.style.display='none'" />`
+        `<img src="${u}" class="${i===0?'selected':''}" data-url="${u}" onclick="selectImg(this)" onerror="this.style.display='none'" />`
       ).join('')}</div>` : ''}
 
       <h3 style="margin-bottom:12px">${name}</h3>
       <div class="detail-meta">
         <div><div class="meta-label">CJ Pris (USD)</div><div class="meta-val">$${price}</div></div>
-        <div><div class="meta-label">Foreslått NOK</div><div class="meta-val">NOK ${Math.round(parseFloat(price)||0 * 10.5 * 1.25)}</div></div>
+        <div><div class="meta-label">Foreslått NOK</div><div class="meta-val">NOK ${Math.round((parseFloat(price)||0) * 10.5 * 1.25)}</div></div>
         ${p.deliveryTime ? `<div><div class="meta-label">Leveringstid</div><div class="meta-val">${p.deliveryTime} dager</div></div>` : ''}
         ${p.weight ? `<div><div class="meta-label">Vekt</div><div class="meta-val">${p.weight}g</div></div>` : ''}
       </div>
@@ -377,7 +389,7 @@ async function openDetailModal(pid) {
       ${p.description ? `<details style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:600;margin-bottom:8px">Produktbeskrivelse</summary><div style="font-size:0.85rem;color:#444;line-height:1.6">${p.description}</div></details>` : ''}
 
       <div style="display:flex;gap:12px">
-        <button class="btn-primary" style="flex:1" onclick="prefillProduct('${pid}','${safeName}','${price}','${safeImages}');closeDetailModal()">
+        <button class="btn-primary" style="flex:1" onclick="importFromCache('${pid}');closeDetailModal()">
           Importer til butikk
         </button>
         <button class="btn-secondary" onclick="closeDetailModal()">Lukk</button>
@@ -388,10 +400,10 @@ async function openDetailModal(pid) {
   }
 }
 
-function selectImg(el, url) {
+function selectImg(el) {
   document.querySelectorAll('.img-gallery img').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
-  document.getElementById('main-img').src = url;
+  document.getElementById('main-img').src = el.dataset.url;
 }
 
 function closeDetailModal() {
@@ -404,7 +416,11 @@ function closeModal(e) {
 
 // ── IMPORT ────────────────────────────────────────────────────
 
-function prefillProduct(pid, name, price, images) {
+function importFromCache(pid) {
+  const p = cjProductCache[pid] || {};
+  const name = p.productNameEn || p.productName || '';
+  const price = p.sellPrice || p.salePrice || '';
+  const images = p._allImages || [p.productImage, ...(p.productImageSet || [])].filter(Boolean);
   showPage('products', null);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelector('[onclick*="products"]').classList.add('active');
@@ -412,7 +428,7 @@ function prefillProduct(pid, name, price, images) {
   document.getElementById('p-name').value = name;
   document.getElementById('p-buy').value = price;
   document.getElementById('p-sell').value = Math.round((parseFloat(price) || 0) * 10.5 * 1.25);
-  if (images) document.getElementById('p-images').value = images;
+  document.getElementById('p-images').value = images.join(', ');
   document.getElementById('p-cj-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 </script>
