@@ -659,16 +659,25 @@ async function importFromUrl() {
   const msg = document.getElementById('cj-url-msg');
   if (!input) return;
 
-  // Extract product ID from URL or use as-is if it looks like an ID
-  let pid = input;
-  const urlMatch = input.match(/-p-(\d+)\.html/) ||
-                   input.match(/[?&](?:pid|productId)=([^&]+)/);
-  if (urlMatch) pid = urlMatch[1];
-  pid = pid.trim();
+  // Extract product ID or SKU from URL
+  let pid = null;
+  let sku = null;
+
+  const pidMatch = input.match(/-p-(\d+)\.html/) || input.match(/[?&](?:pid|productId)=([^&]+)/);
+  const skuMatch = input.match(/\/search\/([A-Z0-9]+)\.html/i) || input.match(/\/([A-Z]{2,}[0-9A-Z]+)\.html/i);
+  const pureNumeric = input.match(/^(\d{10,})$/);
+  const pureSku = input.match(/^([A-Z]{2,}[0-9A-Z]+)$/i);
+
+  if (pidMatch) pid = pidMatch[1].trim();
+  else if (pureNumeric) pid = pureNumeric[1].trim();
+  else if (skuMatch) sku = skuMatch[1].trim();
+  else if (pureSku) sku = pureSku[1].trim();
+  else { msg.style.color = 'red'; msg.textContent = 'Ugyldig URL eller ID. Lim inn en CJ-produktside-URL eller SKU.'; return; }
 
   msg.style.color = '#666'; msg.textContent = 'Henter produktdetaljer fra CJ...';
   try {
-    const res = await api(`/admin/cj/product/${pid}`);
+    const endpoint = sku ? `/admin/cj/sku/${sku}` : `/admin/cj/product/${pid}`;
+    const res = await api(endpoint);
     if (!res.product) { msg.style.color = 'red'; msg.textContent = 'Fant ikke produktet. Sjekk ID/URL.'; return; }
     // Store in cache the same format as importWithDetails uses
     const product = res.product;

@@ -38,10 +38,11 @@ export async function getProduct(pid) {
   return cjRequest(`/v1/product/query?pid=${pid}`);
 }
 
-export async function searchProducts(query, page = 1, pageSize = 20, categoryId = '') {
+export async function searchProducts(query, page = 1, pageSize = 20, categoryId = '', sku = '') {
   let url = `/v1/product/list?pageNum=${page}&pageSize=${pageSize}`;
   if (query) url += `&productNameEn=${encodeURIComponent(query)}`;
   if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+  if (sku) url += `&productSku=${encodeURIComponent(sku)}`;
   const result = await cjRequest(url);
   console.log('CJ search result:', JSON.stringify(result).slice(0, 300));
   return result;

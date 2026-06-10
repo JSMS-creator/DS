@@ -34,6 +34,18 @@ router.get('/cj/categories', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Get CJ product by SKU
+router.get('/cj/sku/:sku', async (req, res, next) => {
+  try {
+    const result = await searchProducts('', 1, 1, '', req.params.sku);
+    const product = result?.data?.list?.[0];
+    if (!product) return res.status(404).json({ error: 'Produkt ikke funnet for SKU: ' + req.params.sku });
+    const pid = product.pid || product.productId;
+    const [fullProduct, variants] = await Promise.all([getProduct(pid), getProductVariants(pid)]);
+    res.json({ product: fullProduct.data, variants: variants.data });
+  } catch (err) { next(err); }
+});
+
 // Search CJ products
 router.get('/cj/search', async (req, res, next) => {
   try {
